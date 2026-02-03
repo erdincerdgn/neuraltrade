@@ -1,0 +1,118 @@
+.allText {
+    color: var(--black-80, rgba(0, 0, 0, 0.80));
+    font-feature-settings: 'liga' off, 'clig' off;
+
+    font-family: Roboto;
+    font-size: 18px !important;
+    font-style: normal;
+    font-weight: 400 !important;
+    line-height: 28px !important;
+}
+
+.addButton {
+    display: inline-flex;
+    padding: 7px 15px;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    border-radius: 20px;
+    background: var(--Masculino-Blue, #152B3A);
+
+    /* Small */
+    box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.08);
+
+    &:hover {
+        background: var(--Masculino-Blue, #152B3A);
+        color: var(--Whiteish, #FAF9F4);
+    }
+}
+
+.addButtonText {
+    color: var(--Whiteish, #FAF9F4);
+
+    /* Base/Large */
+    font-family: Roboto;
+    font-size: 16px !important;
+    font-style: normal;
+    font-weight: 400 !important;
+    line-height: normal !important;
+
+
+}
+
+.header {
+    justify-content: space-between;
+    align-items: center;
+    padding: 30px 20px;
+}
+
+.tableHeader {
+    color: var(--Datatable-text-color, #212529);
+    font-family: Roboto;
+    font-size: 14.4px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 160%;
+    padding-left: 20px !important;
+    border-right: none !important;
+}
+
+.tableCell {
+    color: var(--Datatable-text-color, #212529);
+    font-family: Roboto;
+    font-size: 14.4px;
+    font-style: normal;
+    font-weight: 300;
+    line-height: 160%;
+    padding-left: 20px !important;
+    border-right: none !important;
+}
+
+.clickableText {
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:hover {
+        opacity: 0.8;
+    }
+}
+
+.tableRoot {
+    width: 100%;
+}
+
+.table {
+    width: 100%;
+}
+
+.tableWrapper {
+    :global(.mantine-Table-root) {
+        border-left: none !important;
+        border-right: none !important;
+    }
+
+    :global(.mantine-Table-tr) {
+        border-left: none !important;
+        border-right: none !important;
+    }
+
+    :global(.mantine-Table-td),
+    :global(.mantine-Table-th) {
+        padding-left: 20px !important;
+        border-left: none !important;
+        border-right: none !important;
+    }
+}
+.actionGroup{
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+.approvalIcon{
+    cursor: pointer;
+    color: var(--Masculino-Blue, #152B3A);
+    &:hover {
+        opacity: 0.8;
+    }
+}
+

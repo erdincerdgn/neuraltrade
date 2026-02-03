@@ -1,0 +1,1226 @@
+// =====================================
+// NeuralTrade - Professional Prisma Schema
+// Enterprise-Grade AI Trading Platform
+// =====================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// =====================================
+// USER & AUTHENTICATION
+// =====================================
+
+model User {
+  id                   Int                  @id @default(autoincrement())
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  email                String               @unique
+  name                 String?              @map("name")
+  surname              String?              @map("surname")
+  username             String?              @unique @map("username")
+  password             String               @map("password")
+  phoneNumber          String?              @map("phone_number")
+  role                 UserRole             @default(USER)
+  status               UserStatus           @default(ACTIVE)
+  lastLoginAt          DateTime?            @map("last_login_at")
+  emailVerified        Boolean              @default(false)
+  failedLoginAttempts  Int                  @default(0)
+  lastPasswordChangeAt DateTime?            @map("last_password_change_at")
+  profilePhoto         String?              @map("profile_photo")
+  profileDescription   String?              @map("profile_description")
+  dateOfBirth          DateTime?            @map("date_of_birth")
+  age                  Int?                 @map("age")
+  gender               GenderType           @default(Unspecified)
+  riskProfile          RiskProfile          @default(MODERATE)
+  maxDailyLoss         Decimal?             @db.Decimal(20, 8)
+  maxPositionSize      Decimal?             @db.Decimal(20, 8)
+  maxLeverage          Decimal?             @db.Decimal(5, 2)
+  tradingEnabled       Boolean              @default(true)
+  circuitBreakerUntil  DateTime?
+  portfolios           Portfolio[]
+  orders               Order[]
+  trades               Trade[]
+  alerts               Alert[]
+  aiSignals            AISignal[]
+  watchlists           Watchlist[]
+  apiKeys              ApiKey[]
+  notifications        Notification[]
+  sessions             Session[]
+  subscription         Subscription?
+  ledgerAccounts       LedgerAccount[]
+  transactions         Transaction[]
+  backtests            Backtest[]
+  exchangeConnections  ExchangeConnection[]
+  signalHistory        SignalHistory[]
+
+  @@map("user")
+}
+
+model Session {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model ApiKey {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  name        String
+  key         String    @unique
+  secret      String
+  iv          String?
+  permissions String[]
+  exchange    String?
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("api_key")
+}
+
+model ExchangeConnection {
+  id          Int              @id @default(autoincrement())
+  userId      Int
+  exchange    String
+  status      ConnectionStatus @default(DISCONNECTED)
+  lastSyncAt  DateTime?
+  syncError   String?
+  permissions String[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, exchange])
+  @@map("exchange_connection")
+}
+
+// =====================================
+// LEDGER SYSTEM
+// =====================================
+
+model LedgerAccount {
+  id            Int           @id @default(autoincrement())
+  userId        Int
+  accountType   AccountType
+  currency      String        @default("USD")
+  balance       Decimal       @default(0) @db.Decimal(36, 18)
+  lockedBalance Decimal       @default(0) @db.Decimal(36, 18)
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries       LedgerEntry[]
+
+  @@unique([userId, accountType, currency])
+  @@map("ledger_account")
+}
+
+model LedgerEntry {
+  id            Int           @id @default(autoincrement())
+  accountId     Int
+  transactionId Int
+  entryType     EntryType
+  amount        Decimal       @db.Decimal(36, 18)
+  balanceAfter  Decimal       @db.Decimal(36, 18)
+  description   String?
+  createdAt     DateTime      @default(now())
+  account       LedgerAccount @relation(fields: [accountId], references: [id])
+  transaction   Transaction   @relation(fields: [transactionId], references: [id])
+
+  @@index([accountId, createdAt])
+  @@map("ledger_entry")
+}
+
+model Transaction {
+  id                    Int               @id @default(autoincrement())
+  userId                Int
+  type                  TransactionType
+  status                TransactionStatus @default(PENDING)
+  amount                Decimal           @db.Decimal(36, 18)
+  fee                   Decimal           @default(0) @db.Decimal(36, 18)
+  currency              String
+  network               String?
+  txHash                String?           @unique
+  fromAddress           String?
+  toAddress             String?
+  confirmations         Int               @default(0)
+  requiredConfirmations Int               @default(1)
+  paymentMethod         String?
+  paymentProvider       String?
+  externalId            String?
+  metadata              Json?
+  errorMessage          String?
+  processedAt           DateTime?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  user                  User              @relation(fields: [userId], references: [id])
+  ledgerEntries         LedgerEntry[]
+
+  @@index([userId, type, status])
+  @@index([txHash])
+  @@map("transaction")
+}
+
+// =====================================
+// SUBSCRIPTION & SAAS
+// =====================================
+
+model SubscriptionPlan {
+  id                   Int            @id @default(autoincrement())
+  name                 String
+  slug                 String         @unique
+  description          String?
+  priceMonthly         Decimal        @db.Decimal(10, 2)
+  priceYearly          Decimal        @db.Decimal(10, 2)
+  currency             String         @default("USD")
+  stripePriceIdMonthly String?
+  stripePriceIdYearly  String?
+  iyzicoPlanId         String?
+  features             Json
+  maxPortfolios        Int            @default(1)
+  maxWatchlists        Int            @default(3)
+  maxAlerts            Int            @default(10)
+  maxBacktests         Int            @default(5)
+  aiSignalsEnabled     Boolean        @default(false)
+  quantumEnabled       Boolean        @default(false)
+  swarmEnabled         Boolean        @default(false)
+  ragEnabled           Boolean        @default(false)
+  apiAccessEnabled     Boolean        @default(false)
+  prioritySupport      Boolean        @default(false)
+  isActive             Boolean        @default(true)
+  sortOrder            Int            @default(0)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  subscriptions        Subscription[]
+
+  @@map("subscription_plan")
+}
+
+model Subscription {
+  id                   Int                @id @default(autoincrement())
+  userId               Int                @unique
+  planId               Int
+  status               SubscriptionStatus @default(ACTIVE)
+  billingCycle         BillingCycle       @default(MONTHLY)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  iyzicoSubscriptionId String?
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  trialEndsAt          DateTime?
+  cancelledAt          DateTime?
+  cancelReason         String?
+  aiSignalsUsed        Int                @default(0)
+  backtestsUsed        Int                @default(0)
+  apiCallsUsed         Int                @default(0)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                 SubscriptionPlan   @relation(fields: [planId], references: [id])
+  invoices             Invoice[]
+
+  @@map("subscription")
+}
+
+model Invoice {
+  id              Int           @id @default(autoincrement())
+  subscriptionId  Int
+  invoiceNumber   String        @unique
+  status          InvoiceStatus @default(PENDING)
+  amount          Decimal       @db.Decimal(10, 2)
+  tax             Decimal       @default(0) @db.Decimal(10, 2)
+  total           Decimal       @db.Decimal(10, 2)
+  currency        String        @default("USD")
+  paymentMethod   String?
+  paymentProvider String?
+  externalId      String?
+  paidAt          DateTime?
+  dueDate         DateTime
+  periodStart     DateTime
+  periodEnd       DateTime
+  description     String?
+  pdfUrl          String?
+  createdAt       DateTime      @default(now())
+  subscription    Subscription  @relation(fields: [subscriptionId], references: [id])
+
+  @@index([subscriptionId, status])
+  @@map("invoice")
+}
+
+// =====================================
+// BACKTESTING MODULE
+// =====================================
+
+model Strategy {
+  id          Int          @id @default(autoincrement())
+  userId      Int?
+  name        String
+  description String?
+  type        StrategyType
+  config      Json
+  entryRules  Json
+  exitRules   Json
+  riskParams  Json?
+  isPublic    Boolean      @default(false)
+  isTemplate  Boolean      @default(false)
+  version     Int          @default(1)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  backtests   Backtest[]
+
+  @@map("strategy")
+}
+
+model Backtest {
+  id               Int            @id @default(autoincrement())
+  userId           Int
+  strategyId       Int
+  name             String
+  status           BacktestStatus @default(PENDING)
+  symbols          String[]
+  timeframe        String
+  startDate        DateTime
+  endDate          DateTime
+  initialCapital   Decimal        @db.Decimal(20, 8)
+  commission       Decimal        @default(0.001) @db.Decimal(10, 6)
+  slippage         Decimal        @default(0.0005) @db.Decimal(10, 6)
+  finalCapital     Decimal?       @db.Decimal(20, 8)
+  totalReturn      Decimal?       @db.Decimal(10, 6)
+  sharpeRatio      Decimal?       @db.Decimal(10, 4)
+  sortinoRatio     Decimal?       @db.Decimal(10, 4)
+  maxDrawdown      Decimal?       @db.Decimal(10, 6)
+  winRate          Decimal?       @db.Decimal(5, 4)
+  profitFactor     Decimal?       @db.Decimal(10, 4)
+  totalTrades      Int?
+  winningTrades    Int?
+  losingTrades     Int?
+  avgWin           Decimal?       @db.Decimal(20, 8)
+  avgLoss          Decimal?       @db.Decimal(20, 8)
+  largestWin       Decimal?       @db.Decimal(20, 8)
+  largestLoss      Decimal?       @db.Decimal(20, 8)
+  avgHoldingPeriod Int?
+  executionTime    Int?
+  errorMessage     String?        @db.Text
+  equityCurve      Json?
+  dailyReturns     Json?
+  monthlyReturns   Json?
+  tradeLog         Json?
+  metrics          Json?
+  createdAt        DateTime       @default(now())
+  completedAt      DateTime?
+  user             User           @relation(fields: [userId], references: [id])
+  strategy         Strategy       @relation(fields: [strategyId], references: [id])
+
+  @@index([userId, status])
+  @@map("backtest")
+}
+
+// =====================================
+// PORTFOLIO & POSITIONS
+// =====================================
+
+model Portfolio {
+  id              Int                     @id @default(autoincrement())
+  userId          Int
+  name            String
+  description     String?
+  isDefault       Boolean                 @default(false)
+  currency        String                  @default("USD")
+  totalValue      Decimal                 @default(0) @db.Decimal(36, 18)
+  totalCost       Decimal                 @default(0) @db.Decimal(36, 18)
+  totalPnL        Decimal                 @default(0) @db.Decimal(36, 18)
+  totalPnLPercent Decimal                 @default(0) @db.Decimal(10, 4)
+  riskScore       Decimal?                @db.Decimal(5, 2)
+  sharpeRatio     Decimal?                @db.Decimal(10, 4)
+  maxDrawdown     Decimal?                @db.Decimal(10, 4)
+  dailyLoss       Decimal                 @default(0) @db.Decimal(36, 18)
+  dailyLossReset  DateTime?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  positions       Position[]
+  orders          Order[]
+  trades          Trade[]
+  snapshots       PortfolioSnapshot[]
+  optimizations   PortfolioOptimization[]
+
+  @@map("portfolio")
+}
+
+model Position {
+  id               Int          @id @default(autoincrement())
+  portfolioId      Int
+  symbol           String
+  assetType        AssetType
+  quantity         Decimal      @db.Decimal(36, 18)
+  avgCost          Decimal      @db.Decimal(36, 18)
+  currentPrice     Decimal      @db.Decimal(36, 18)
+  marketValue      Decimal      @db.Decimal(36, 18)
+  unrealizedPnL    Decimal      @db.Decimal(36, 18)
+  unrealizedPct    Decimal      @db.Decimal(10, 4)
+  allocation       Decimal      @db.Decimal(10, 4)
+  side             PositionSide
+  leverage         Decimal?     @db.Decimal(5, 2)
+  liquidationPrice Decimal?     @db.Decimal(36, 18)
+  openedAt         DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  portfolio        Portfolio    @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  trades           Trade[]
+
+  @@unique([portfolioId, symbol])
+  @@map("position")
+}
+
+model PortfolioSnapshot {
+  id          Int       @id @default(autoincrement())
+  portfolioId Int
+  totalValue  Decimal   @db.Decimal(36, 18)
+  totalPnL    Decimal   @db.Decimal(36, 18)
+  date        DateTime  @default(now())
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@map("portfolio_snapshot")
+}
+
+// =====================================
+// ORDERS & TRADES
+// =====================================
+
+model Order {
+  id            Int         @id @default(autoincrement())
+  userId        Int
+  portfolioId   Int?
+  symbol        String
+  assetType     AssetType
+  side          OrderSide
+  type          OrderType
+  status        OrderStatus @default(PENDING)
+  quantity      Decimal     @db.Decimal(36, 18)
+  filledQty     Decimal     @default(0) @db.Decimal(36, 18)
+  price         Decimal?    @db.Decimal(36, 18)
+  stopPrice     Decimal?    @db.Decimal(36, 18)
+  avgFillPrice  Decimal?    @db.Decimal(36, 18)
+  timeInForce   TimeInForce @default(GTC)
+  source        OrderSource @default(MANUAL)
+  aiSignalId    Int?
+  clientOrderId String?     @unique
+  exchangeId    String?
+  exchange      String?
+  commission    Decimal?    @db.Decimal(36, 18)
+  notes         String?
+  errorMessage  String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  filledAt      DateTime?
+  cancelledAt   DateTime?
+  expiresAt     DateTime?
+  user          User        @relation(fields: [userId], references: [id])
+  portfolio     Portfolio?  @relation(fields: [portfolioId], references: [id])
+  aiSignal      AISignal?   @relation(fields: [aiSignalId], references: [id])
+  trades        Trade[]
+
+  @@index([userId, status])
+  @@index([symbol, status])
+  @@map("order")
+}
+
+model Trade {
+  id          Int        @id @default(autoincrement())
+  userId      Int
+  portfolioId Int?
+  positionId  Int?
+  orderId     Int?
+  symbol      String
+  assetType   AssetType
+  side        OrderSide
+  quantity    Decimal    @db.Decimal(36, 18)
+  price       Decimal    @db.Decimal(36, 18)
+  value       Decimal    @db.Decimal(36, 18)
+  commission  Decimal    @default(0) @db.Decimal(36, 18)
+  realizedPnL Decimal?   @db.Decimal(36, 18)
+  exchange    String?
+  exchangeId  String?
+  executedAt  DateTime   @default(now())
+  user        User       @relation(fields: [userId], references: [id])
+  portfolio   Portfolio? @relation(fields: [portfolioId], references: [id])
+  position    Position?  @relation(fields: [positionId], references: [id])
+  order       Order?     @relation(fields: [orderId], references: [id])
+
+  @@index([userId, executedAt])
+  @@index([symbol, executedAt])
+  @@map("trade")
+}
+
+// =====================================
+// AI SIGNALS & PREDICTIONS
+// =====================================
+
+model AISignal {
+  id           Int             @id @default(autoincrement())
+  userId       Int?
+  symbol       String
+  signalType   SignalType
+  direction    SignalDirection
+  confidence   Decimal         @db.Decimal(5, 4)
+  strength     SignalStrength
+  entryPrice   Decimal?        @db.Decimal(36, 18)
+  targetPrice  Decimal?        @db.Decimal(36, 18)
+  stopLoss     Decimal?        @db.Decimal(36, 18)
+  riskReward   Decimal?        @db.Decimal(5, 2)
+  timeframe    String?
+  features     Json?
+  reasoning    String?         @db.Text
+  source       AISource
+  modelVersion String?
+  isActive     Boolean         @default(true)
+  wasActedUpon Boolean         @default(false)
+  outcome      SignalOutcome?
+  actualReturn Decimal?        @db.Decimal(10, 4)
+  expiresAt    DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  user         User?           @relation(fields: [userId], references: [id])
+  orders       Order[]
+
+  @@index([symbol, signalType, createdAt])
+  @@index([isActive, createdAt])
+  @@map("ai_signal")
+}
+
+// NEW: Signal History for Proto v2.0
+model SignalHistory {
+  id                  Int       @id @default(autoincrement())
+  userId              Int?
+  symbol              String
+  action              String
+  confidence          Decimal   @db.Decimal(5, 4)
+  targetPrice         Decimal?  @db.Decimal(36, 18)
+  stopLoss            Decimal?  @db.Decimal(36, 18)
+  takeProfit          Decimal?  @db.Decimal(36, 18)
+  reasoning           String?   @db.Text
+  modelUsed           String?
+  regime              String?
+  volatility          Decimal?  @db.Decimal(10, 6)
+  riskRewardRatio     Decimal?  @db.Decimal(5, 2)
+  expectedReturn      Decimal?  @db.Decimal(10, 6)
+  maxDrawdownEstimate Decimal?  @db.Decimal(10, 6)
+  contributors        Json?
+  metadata            Json?
+  processedAt         DateTime?
+  timestamp           DateTime  @default(now())
+  createdAt           DateTime  @default(now())
+  user                User?     @relation(fields: [userId], references: [id])
+
+  @@index([symbol, timestamp])
+  @@index([userId, timestamp])
+  @@index([action, timestamp])
+  @@map("signal_history")
+}
+
+model SwarmConsensus {
+  id             Int             @id @default(autoincrement())
+  symbol         String
+  bullScore      Decimal         @db.Decimal(5, 4)
+  bearScore      Decimal         @db.Decimal(5, 4)
+  neutralScore   Decimal         @db.Decimal(5, 4)
+  finalDecision  SignalDirection
+  judgeReasoning String?         @db.Text
+  agentVotes     Json
+  confidence     Decimal         @db.Decimal(5, 4)
+  marketContext  Json?
+  createdAt      DateTime        @default(now())
+
+  @@index([symbol, createdAt])
+  @@map("swarm_consensus")
+}
+
+model QuantumOptimization {
+  id               Int      @id @default(autoincrement())
+  portfolioId      Int?
+  optimizationType String
+  inputParams      Json
+  outputWeights    Json
+  expectedReturn   Decimal  @db.Decimal(10, 6)
+  expectedRisk     Decimal  @db.Decimal(10, 6)
+  sharpeRatio      Decimal  @db.Decimal(10, 4)
+  executionTime    Int
+  qubitsUsed       Int?
+  circuitDepth     Int?
+  createdAt        DateTime @default(now())
+
+  @@map("quantum_optimization")
+}
+
+model PortfolioOptimization {
+  id              Int                @id @default(autoincrement())
+  portfolioId     Int
+  method          String
+  inputParams     Json
+  currentWeights  Json
+  optimalWeights  Json
+  expectedReturn  Decimal            @db.Decimal(10, 6)
+  expectedRisk    Decimal            @db.Decimal(10, 6)
+  sharpeRatio     Decimal            @db.Decimal(10, 4)
+  rebalanceNeeded Boolean            @default(false)
+  status          OptimizationStatus @default(COMPLETED)
+  createdAt       DateTime           @default(now())
+  portfolio       Portfolio          @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@map("portfolio_optimization")
+}
+
+model RegimeDetection {
+  id         Int            @id @default(autoincrement())
+  symbol     String?
+  regime     MarketRegime
+  confidence Decimal        @db.Decimal(5, 4)
+  volatility Decimal        @db.Decimal(10, 6)
+  trend      TrendDirection
+  momentum   Decimal        @db.Decimal(10, 4)
+  features   Json?
+  detectedAt DateTime       @default(now())
+
+  @@index([symbol, detectedAt])
+  @@map("regime_detection")
+}
+
+model TechnicalAnalysis {
+  id             Int            @id @default(autoincrement())
+  symbol         String
+  timeframe      String
+  price          Decimal        @db.Decimal(36, 18)
+  rsi            Decimal        @db.Decimal(10, 4)
+  macd           Json?
+  bollingerBands Json?
+  atr            Decimal?       @db.Decimal(36, 18)
+  volume         Decimal?       @db.Decimal(20, 2)
+  trend          TrendDirection
+  fvgCount       Int            @default(0)
+  fvgs           Json?
+  supports       Json?
+  resistances    Json?
+  indicators     Json?
+  createdAt      DateTime       @default(now())
+
+  @@index([symbol, timeframe, createdAt])
+  @@map("technical_analysis")
+}
+
+model RAGQuery {
+  id         Int            @id @default(autoincrement())
+  userId     Int?
+  query      String         @db.Text
+  context    String?        @db.Text
+  response   String         @db.Text
+  sources    Json?
+  confidence Decimal        @db.Decimal(5, 4)
+  tokensUsed Int
+  latencyMs  Int
+  feedback   QueryFeedback?
+  createdAt  DateTime       @default(now())
+
+  @@map("rag_query")
+}
+
+// NEW: Volatility Surface for Proto v2.0
+model VolatilitySurface {
+  id                Int          @id @default(autoincrement())
+  symbol            String
+  spotPrice         Decimal      @db.Decimal(36, 18)
+  riskFreeRate      Decimal      @db.Decimal(10, 6)
+  dividendYield     Decimal?     @db.Decimal(10, 6)
+  model             VolModelType @default(SABR)
+  rmse              Decimal?     @db.Decimal(10, 6)
+  maxError          Decimal?     @db.Decimal(10, 6)
+  calibrationTimeMs Int?
+  smiles            Json?
+  marketData        Json?
+  createdAt         DateTime     @default(now())
+
+  @@index([symbol, createdAt])
+  @@map("volatility_surface")
+}
+
+// NEW: Options Greeks for Proto v2.0
+model OptionsGreeks {
+  id           Int        @id @default(autoincrement())
+  symbol       String
+  optionType   OptionType @default(CALL)
+  spotPrice    Decimal    @db.Decimal(36, 18)
+  strike       Decimal    @db.Decimal(36, 18)
+  expiry       Decimal    @db.Decimal(10, 6)
+  riskFreeRate Decimal    @db.Decimal(10, 6)
+  volatility   Decimal    @db.Decimal(10, 6)
+  price        Decimal?   @db.Decimal(36, 18)
+  delta        Decimal?   @db.Decimal(10, 6)
+  gamma        Decimal?   @db.Decimal(10, 6)
+  theta        Decimal?   @db.Decimal(10, 6)
+  vega         Decimal?   @db.Decimal(10, 6)
+  rho          Decimal?   @db.Decimal(10, 6)
+  vanna        Decimal?   @db.Decimal(10, 6)
+  volga        Decimal?   @db.Decimal(10, 6)
+  createdAt    DateTime   @default(now())
+
+  @@index([symbol, strike, expiry])
+  @@map("options_greeks")
+}
+
+// NEW: Risk Metrics for Proto v2.0
+model RiskMetrics {
+  id           Int       @id @default(autoincrement())
+  portfolioId  Int?
+  symbol       String?
+  volatility   Decimal?  @db.Decimal(10, 6)
+  var95        Decimal?  @db.Decimal(10, 6)
+  var99        Decimal?  @db.Decimal(10, 6)
+  cvar95       Decimal?  @db.Decimal(10, 6)
+  cvar99       Decimal?  @db.Decimal(10, 6)
+  sharpeRatio  Decimal?  @db.Decimal(10, 4)
+  sortinoRatio Decimal?  @db.Decimal(10, 4)
+  calmarRatio  Decimal?  @db.Decimal(10, 4)
+  maxDrawdown  Decimal?  @db.Decimal(10, 6)
+  skewness     Decimal?  @db.Decimal(10, 4)
+  kurtosis     Decimal?  @db.Decimal(10, 4)
+  calculatedAt DateTime  @default(now())
+
+  @@index([portfolioId, calculatedAt])
+  @@index([symbol, calculatedAt])
+  @@map("risk_metrics")
+}
+
+// NEW: Stress Test Results for Proto v2.0
+model StressTestResult {
+  id              Int      @id @default(autoincrement())
+  portfolioId     Int?
+  scenarioName    String
+  portfolioPnl    Decimal  @db.Decimal(20, 8)
+  portfolioPnlPct Decimal  @db.Decimal(10, 6)
+  positionPnls    Json?
+  worstCaseLoss   Decimal? @db.Decimal(20, 8)
+  createdAt       DateTime @default(now())
+
+  @@index([portfolioId, createdAt])
+  @@map("stress_test_result")
+}
+
+// =====================================
+// MARKET DATA
+// =====================================
+
+model Asset {
+  id           Int            @id @default(autoincrement())
+  symbol       String         @unique
+  name         String
+  assetType    AssetType
+  exchange     String?
+  currency     String         @default("USD")
+  sector       String?
+  industry     String?
+  marketCap    Decimal?       @db.Decimal(20, 2)
+  decimals     Int            @default(8)
+  minQuantity  Decimal?       @db.Decimal(36, 18)
+  isActive     Boolean        @default(true)
+  isTradable   Boolean        @default(true)
+  metadata     Json?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  priceHistory PriceHistory[]
+  fundamentals Fundamental[]
+
+  @@map("asset")
+}
+
+model PriceHistory {
+  id        Int      @id @default(autoincrement())
+  assetId   Int
+  symbol    String
+  timeframe String
+  open      Decimal  @db.Decimal(36, 18)
+  high      Decimal  @db.Decimal(36, 18)
+  low       Decimal  @db.Decimal(36, 18)
+  close     Decimal  @db.Decimal(36, 18)
+  volume    Decimal  @db.Decimal(36, 8)
+  timestamp DateTime
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, timeframe, timestamp])
+  @@index([symbol, timeframe, timestamp])
+  @@map("price_history")
+}
+
+model Fundamental {
+  id            Int      @id @default(autoincrement())
+  assetId       Int
+  symbol        String
+  peRatio       Decimal? @db.Decimal(10, 4)
+  pbRatio       Decimal? @db.Decimal(10, 4)
+  eps           Decimal? @db.Decimal(10, 4)
+  dividendYield Decimal? @db.Decimal(10, 4)
+  debtToEquity  Decimal? @db.Decimal(10, 4)
+  roe           Decimal? @db.Decimal(10, 4)
+  revenue       Decimal? @db.Decimal(20, 2)
+  netIncome     Decimal? @db.Decimal(20, 2)
+  freeCashFlow  Decimal? @db.Decimal(20, 2)
+  quarter       String?
+  reportDate    DateTime
+  createdAt     DateTime @default(now())
+  asset         Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@map("fundamental")
+}
+
+model EconomicEvent {
+  id          Int         @id @default(autoincrement())
+  name        String
+  country     String
+  impact      EventImpact
+  actual      String?
+  forecast    String?
+  previous    String?
+  currency    String?
+  eventTime   DateTime
+  isProcessed Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+
+  @@index([eventTime, impact])
+  @@map("economic_event")
+}
+
+// =====================================
+// WATCHLISTS & ALERTS
+// =====================================
+
+model Watchlist {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  name      String
+  symbols   String[]
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("watchlist")
+}
+
+model Alert {
+  id           Int           @id @default(autoincrement())
+  userId       Int
+  symbol       String?
+  alertType    AlertType
+  condition    Json
+  message      String?
+  priority     AlertPriority @default(MEDIUM)
+  isActive     Boolean       @default(true)
+  isTriggered  Boolean       @default(false)
+  triggeredAt  DateTime?
+  notifyEmail  Boolean       @default(false)
+  notifyPush   Boolean       @default(true)
+  cooldownMins Int           @default(60)
+  lastNotified DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@map("alert")
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int
+  type      NotificationType
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+  @@map("notification")
+}
+
+// =====================================
+// JOB QUEUE & SYSTEM
+// =====================================
+
+model Job {
+  id          Int       @id @default(autoincrement())
+  name        String
+  type        JobType
+  status      JobStatus @default(PENDING)
+  priority    Int       @default(0)
+  payload     Json?
+  result      Json?
+  error       String?   @db.Text
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  progress    Int       @default(0)
+  scheduledAt DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([type, status])
+  @@index([scheduledAt, status])
+  @@map("job")
+}
+
+model SystemMetric {
+  id         Int      @id @default(autoincrement())
+  metricName String
+  value      Decimal  @db.Decimal(20, 6)
+  labels     Json?
+  timestamp  DateTime @default(now())
+
+  @@index([metricName, timestamp])
+  @@map("system_metric")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  action    String
+  entity    String
+  entityId  String?
+  oldValue  Json?
+  newValue  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([entity, entityId])
+  @@map("audit_log")
+}
+
+model Media {
+  id    Int       @id @default(autoincrement())
+  url   String    @map("url")
+  type  MediaType @map("type")
+  order Int?      @map("order")
+
+  @@map("media")
+}
+
+// =====================================
+// ENUMS
+// =====================================
+
+enum UserStatus {
+  INVITED   @map("invited")
+  PENDING   @map("pending")
+  ACTIVE    @map("active")
+  SUSPENDED @map("suspended")
+  INACTIVE  @map("inactive")
+}
+
+enum UserRole {
+  USER        @map("user")
+  NEURALTRADE @map("neuraltrade")
+  SUPER_ADMIN @map("super_admin")
+}
+
+enum RiskProfile {
+  CONSERVATIVE     @map("conservative")
+  MODERATE         @map("moderate")
+  AGGRESSIVE       @map("aggressive")
+  ULTRA_AGGRESSIVE @map("ultra_aggressive")
+}
+
+enum GenderType {
+  Unspecified @map("unspecified")
+  Male        @map("male")
+  Female      @map("female")
+}
+
+enum MediaType {
+  Image @map("image")
+  Video @map("video")
+}
+
+enum AssetType {
+  STOCK     @map("stock")
+  CRYPTO    @map("crypto")
+  FOREX     @map("forex")
+  COMMODITY @map("commodity")
+  INDEX     @map("index")
+  ETF       @map("etf")
+  OPTION    @map("option")
+  FUTURE    @map("future")
+}
+
+enum PositionSide {
+  LONG  @map("long")
+  SHORT @map("short")
+}
+
+enum OrderSide {
+  BUY  @map("buy")
+  SELL @map("sell")
+}
+
+enum OrderType {
+  MARKET     @map("market")
+  LIMIT      @map("limit")
+  STOP       @map("stop")
+  STOP_LIMIT @map("stop_limit")
+  TRAILING   @map("trailing")
+}
+
+enum OrderStatus {
+  PENDING   @map("pending")
+  OPEN      @map("open")
+  PARTIAL   @map("partial")
+  FILLED    @map("filled")
+  CANCELLED @map("cancelled")
+  REJECTED  @map("rejected")
+  EXPIRED   @map("expired")
+}
+
+enum TimeInForce {
+  GTC @map("gtc")
+  IOC @map("ioc")
+  FOK @map("fok")
+  DAY @map("day")
+  GTD @map("gtd")
+}
+
+enum OrderSource {
+  MANUAL      @map("manual")
+  AI_SIGNAL   @map("ai_signal")
+  ALGORITHM   @map("algorithm")
+  REBALANCE   @map("rebalance")
+  STOP_LOSS   @map("stop_loss")
+  TAKE_PROFIT @map("take_profit")
+}
+
+enum SignalType {
+  ENTRY      @map("entry")
+  EXIT       @map("exit")
+  SCALE_IN   @map("scale_in")
+  SCALE_OUT  @map("scale_out")
+  REBALANCE  @map("rebalance")
+  RISK_ALERT @map("risk_alert")
+}
+
+enum SignalDirection {
+  BULLISH @map("bullish")
+  BEARISH @map("bearish")
+  NEUTRAL @map("neutral")
+}
+
+enum SignalStrength {
+  WEAK        @map("weak")
+  MODERATE    @map("moderate")
+  STRONG      @map("strong")
+  VERY_STRONG @map("very_strong")
+}
+
+enum AISource {
+  RAG           @map("rag")
+  SWARM         @map("swarm")
+  QUANTUM       @map("quantum")
+  ML_PREDICTION @map("ml_prediction")
+  TECHNICAL     @map("technical")
+  FUNDAMENTAL   @map("fundamental")
+  SENTIMENT     @map("sentiment")
+  MACRO         @map("macro")
+  REGIME        @map("regime")
+  ENSEMBLE      @map("ensemble")
+}
+
+enum SignalOutcome {
+  PROFITABLE @map("profitable")
+  LOSS       @map("loss")
+  BREAKEVEN  @map("breakeven")
+  EXPIRED    @map("expired")
+  CANCELLED  @map("cancelled")
+}
+
+enum MarketRegime {
+  BULL_QUIET    @map("bull_quiet")
+  BULL_VOLATILE @map("bull_volatile")
+  BEAR_QUIET    @map("bear_quiet")
+  BEAR_VOLATILE @map("bear_volatile")
+  RANGING       @map("ranging")
+  CRISIS        @map("crisis")
+}
+
+enum TrendDirection {
+  UPTREND   @map("uptrend")
+  DOWNTREND @map("downtrend")
+  SIDEWAYS  @map("sideways")
+}
+
+enum OptimizationStatus {
+  PENDING   @map("pending")
+  RUNNING   @map("running")
+  COMPLETED @map("completed")
+  FAILED    @map("failed")
+}
+
+enum EventImpact {
+  LOW    @map("low")
+  MEDIUM @map("medium")
+  HIGH   @map("high")
+}
+
+enum AlertType {
+  PRICE     @map("price")
+  VOLUME    @map("volume")
+  AI_SIGNAL @map("ai_signal")
+  PORTFOLIO @map("portfolio")
+  POSITION  @map("position")
+  ORDER     @map("order")
+  SYSTEM    @map("system")
+  ECONOMIC  @map("economic")
+}
+
+enum AlertPriority {
+  LOW    @map("low")
+  MEDIUM @map("medium")
+  HIGH   @map("high")
+  URGENT @map("urgent")
+}
+
+enum NotificationType {
+  INFO      @map("info")
+  SUCCESS   @map("success")
+  WARNING   @map("warning")
+  ERROR     @map("error")
+  AI_SIGNAL @map("ai_signal")
+  TRADE     @map("trade")
+  ALERT     @map("alert")
+}
+
+enum QueryFeedback {
+  HELPFUL     @map("helpful")
+  NOT_HELPFUL @map("not_helpful")
+  INCORRECT   @map("incorrect")
+}
+
+enum JobType {
+  AI_ANALYSIS    @map("ai_analysis")
+  MARKET_DATA    @map("market_data")
+  PORTFOLIO_SYNC @map("portfolio_sync")
+  REBALANCE      @map("rebalance")
+  NOTIFICATION   @map("notification")
+  REPORT         @map("report")
+  CLEANUP        @map("cleanup")
+  BACKTEST       @map("backtest")
+}
+
+enum JobStatus {
+  PENDING   @map("pending")
+  RUNNING   @map("running")
+  COMPLETED @map("completed")
+  FAILED    @map("failed")
+  CANCELLED @map("cancelled")
+}
+
+enum AccountType {
+  WALLET  @map("wallet")
+  TRADING @map("trading")
+  MARGIN  @map("margin")
+  EARN    @map("earn")
+  LOCKED  @map("locked")
+}
+
+enum EntryType {
+  DEBIT  @map("debit")
+  CREDIT @map("credit")
+}
+
+enum TransactionType {
+  DEPOSIT    @map("deposit")
+  WITHDRAW   @map("withdraw")
+  TRANSFER   @map("transfer")
+  FEE        @map("fee")
+  REFUND     @map("refund")
+  ADJUSTMENT @map("adjustment")
+}
+
+enum TransactionStatus {
+  PENDING    @map("pending")
+  PROCESSING @map("processing")
+  COMPLETED  @map("completed")
+  FAILED     @map("failed")
+  CANCELLED  @map("cancelled")
+}
+
+enum ConnectionStatus {
+  CONNECTED    @map("connected")
+  DISCONNECTED @map("disconnected")
+  ERROR        @map("error")
+  SYNCING      @map("syncing")
+}
+
+enum SubscriptionStatus {
+  ACTIVE    @map("active")
+  PAST_DUE  @map("past_due")
+  CANCELLED @map("cancelled")
+  EXPIRED   @map("expired")
+  TRIALING  @map("trialing")
+}
+
+enum BillingCycle {
+  MONTHLY @map("monthly")
+  YEARLY  @map("yearly")
+}
+
+enum InvoiceStatus {
+  PENDING  @map("pending")
+  PAID     @map("paid")
+  FAILED   @map("failed")
+  REFUNDED @map("refunded")
+}
+
+enum StrategyType {
+  TREND_FOLLOWING  @map("trend_following")
+  MEAN_REVERSION   @map("mean_reversion")
+  MOMENTUM         @map("momentum")
+  BREAKOUT         @map("breakout")
+  ARBITRAGE        @map("arbitrage")
+  MACHINE_LEARNING @map("machine_learning")
+  CUSTOM           @map("custom")
+}
+
+enum BacktestStatus {
+  PENDING   @map("pending")
+  RUNNING   @map("running")
+  COMPLETED @map("completed")
+  FAILED    @map("failed")
+  CANCELLED @map("cancelled")
+}
+
+// NEW: Proto v2.0 Enums
+enum VolModelType {
+  SABR   @map("sabr")
+  SVI    @map("svi")
+  DUPIRE @map("dupire")
+  HESTON @map("heston")
+}
+
+enum OptionType {
+  CALL @map("call")
+  PUT  @map("put")
+}

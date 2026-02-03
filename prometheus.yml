@@ -1,0 +1,237 @@
+# ============================================================
+# NeuralTrade - Prometheus Configuration
+# ============================================================
+# Comprehensive monitoring for 86 modules with proper scrape intervals
+# ============================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'neuraltrade-production'
+    env: 'prod'
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+# Rule files
+rule_files:
+  - 'recording_rules.yml'
+  - 'alerting_rules.yml'
+
+# Scrape configurations
+scrape_configs:
+  # ============================================================
+  # Core Application Metrics (5s - Real-time)
+  # ============================================================
+  - job_name: 'neuraltrade-app'
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['neuraltrade:8000']
+        labels:
+          service: 'main-app'
+          tier: 'core'
+
+  # ============================================================
+  # Portfolio & Trading Metrics (5s - Real-time)
+  # ============================================================
+  - job_name: 'neuraltrade-portfolio'
+    metrics_path: '/metrics/portfolio'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['neuraltrade:9090']
+        labels:
+          service: 'portfolio'
+          tier: 'trading'
+          modules: 'optimizer,backtest,smart_order,circuit_breaker'
+
+  # ============================================================
+  # Risk & Execution Metrics (5s - Real-time)
+  # ============================================================
+  - job_name: 'neuraltrade-risk'
+    metrics_path: '/metrics/risk'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['neuraltrade:9090']
+        labels:
+          service: 'risk-management'
+          tier: 'trading'
+          modules: 'tca,mev_protection,gamma_exposure'
+
+  # ============================================================
+  # ML & AI Metrics (10s - Active Monitoring)
+  # ============================================================
+  - job_name: 'neuraltrade-ml'
+    metrics_path: '/metrics/ml'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['neuraltrade:9090']
+        labels:
+          service: 'machine-learning'
+          tier: 'ai'
+          modules: 'drl,forecaster,explainer,gan'
+
+  # ============================================================
+  # Regime & Market State (10s - Active Monitoring)
+  # ============================================================
+  - job_name: 'neuraltrade-regime'
+    metrics_path: '/metrics/regime'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['neuraltrade:9090']
+        labels:
+          service: 'regime-detection'
+          tier: 'analytics'
+          modules: 'hmm,hurst,lyapunov,switcher'
+
+  # ============================================================
+  # Infrastructure & System (15s - Standard)
+  # ============================================================
+  - job_name: 'neuraltrade-infrastructure'
+    metrics_path: '/metrics/infrastructure'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['neuraltrade:9090']
+        labels:
+          service: 'infrastructure'
+          tier: 'system'
+          modules: 'audit,latency,metrics,rust_engine'
+
+  # ============================================================
+  # Data & Intelligence (15s - Standard)
+  # ============================================================
+  - job_name: 'neuraltrade-data'
+    metrics_path: '/metrics/data'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['neuraltrade:9090']
+        labels:
+          service: 'data-pipeline'
+          tier: 'intelligence'
+          modules: 'rag,kg,semantic_router,vision_rag'
+
+  # ============================================================
+  # Quantum & Advanced Analytics (30s - Background)
+  # ============================================================
+  - job_name: 'neuraltrade-quantum'
+    metrics_path: '/metrics/quantum'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['neuraltrade:9090']
+        labels:
+          service: 'quantum-analytics'
+          tier: 'research'
+          modules: 'tensor_network,quantum_annealing,qpu'
+
+  # ============================================================
+  # Topology & Graph Theory (30s - Background)
+  # ============================================================
+  - job_name: 'neuraltrade-topology'
+    metrics_path: '/metrics/topology'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['neuraltrade:9090']
+        labels:
+          service: 'topology-analysis'
+          tier: 'research'
+          modules: 'tda,causal_graph,supply_chain'
+
+  # ============================================================
+  # System & Node Metrics
+  # ============================================================
+  - job_name: 'node-exporter'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'system-metrics'
+          tier: 'infrastructure'
+
+  - job_name: 'prometheus'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+          tier: 'monitoring'
+
+  # ============================================================
+  # cadvisor - Docker Container Metrics
+  # ============================================================
+  - job_name: 'cadvisor'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'cadvisor'
+          tier: 'infrastructure'
+
+  # ============================================================
+  # NestJS Backend Metrics
+  # ============================================================
+  - job_name: 'neuraltrade-backend'
+    metrics_path: '/api/api/v1/metrics'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['neuraltrade-be:3000']
+        labels:
+          service: 'nestjs-backend'
+          tier: 'application'
+
+  - job_name: 'redis'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['redis:6379']
+        labels:
+          service: 'redis'
+          tier: 'infrastructure'
+
+  # ============================================================
+  # Additional Module Groups (15s - Standard)
+  # ============================================================
+  - job_name: 'neuraltrade-federated'
+    metrics_path: '/metrics/federated'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['neuraltrade:9090']
+        labels:
+          service: 'federated-learning'
+          tier: 'distributed'
+
+  - job_name: 'neuraltrade-cloud'
+    metrics_path: '/metrics/cloud'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['neuraltrade:9090']
+        labels:
+          service: 'multi-cloud'
+          tier: 'infrastructure'
+
+  - job_name: 'neuraltrade-vault'
+    metrics_path: '/metrics/vault'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['neuraltrade:9090']
+        labels:
+          service: 'vault'
+          tier: 'defi'
+
+  - job_name: 'neuraltrade-compliance'
+    metrics_path: '/metrics/compliance'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['neuraltrade:9090']
+        labels:
+          service: 'compliance'
+          tier: 'regulatory'
+
+# ============================================================
+# Storage & Retention
+# ============================================================
+# Configured via command line:
+# --storage.tsdb.retention.time=30d
+# --storage.tsdb.path=/prometheus

@@ -1,0 +1,105 @@
+# ============================================================  
+# NeuralTrade - Alertmanager Configuration
+# ============================================================
+# Alert routing and notification management
+# ============================================================
+
+global:
+  resolve_timeout: 5m
+  smtp_from: 'neuraltrade-alerts@example.com'
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_auth_username: 'neuraltrade-alerts@example.com'
+  smtp_auth_password: 'CHANGEME'
+
+# Templates
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Alert routing
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+  receiver: 'default'
+  
+  routes:
+    # Critical trading alerts - immediate notification
+    - match:
+        severity: critical
+        tier: trading
+      receiver: 'critical-trading'
+      group_wait: 0s
+      repeat_interval: 5m
+    
+    # High priority - quick notification
+    - match:
+        severity: warning
+        tier: trading
+      receiver: 'trading-warnings'
+      group_wait: 30s
+      repeat_interval: 1h
+    
+    # Infrastructure issues
+    - match:
+        severity: warning
+        tier: infrastructure
+      receiver: 'infrastructure-team'
+      repeat_interval: 4h
+    
+    # Research/background - low priority
+    - match:
+        tier: research
+      receiver: 'research-team'
+      repeat_interval: 24h
+
+# Receivers
+receivers:
+  - name: 'default'
+    # Webhook disabled - neuraltrade runs as batch job without API endpoint
+    # webhook_configs:
+    #   - url: 'http://neuraltrade:8000/webhooks/alerts'
+    #     send_resolved: true
+
+  - name: 'critical-trading'
+    # Webhook disabled - neuraltrade runs as batch job without API endpoint
+    # webhook_configs:
+    #   - url: 'http://neuraltrade:8000/webhooks/critical'
+    #     send_resolved: true
+    # Add email/slack/pagerduty here when ready
+    # email_configs:
+    #   - to: 'trading-team@example.com'
+    #     send_resolved: true
+
+  - name: 'trading-warnings'
+    # Webhook disabled - neuraltrade runs as batch job without API endpoint
+    # webhook_configs:
+    #   - url: 'http://neuraltrade:8000/webhooks/warnings'
+
+  - name: 'infrastructure-team'
+    # Webhook disabled - neuraltrade runs as batch job without API endpoint
+    # webhook_configs:
+    #   - url: 'http://neuraltrade:8000/webhooks/infra'
+
+  - name: 'research-team'
+    # Webhook disabled - neuraltrade runs as batch job without API endpoint
+    # webhook_configs:
+    #   - url: 'http://neuraltrade:8000/webhooks/research'
+
+# Inhibition rules - prevent alert spam
+inhibit_rules:
+  # If service is down, don't alert on metrics  
+  - source_match:
+      severity: 'critical'
+      alertname: 'ServiceDown'
+    target_match:
+      severity: 'warning'
+    equal: ['service']
+  
+  # If instance is down, don't alert on specific metrics
+  - source_match:
+      severity: 'critical'
+      alertname: 'InstanceDown'
+    target_match_re:
+      severity: 'warning|info'
+    equal: ['instance']

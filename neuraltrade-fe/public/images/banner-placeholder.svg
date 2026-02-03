@@ -1,0 +1,13 @@
+<svg width="1200" height="300" viewBox="0 0 1200 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Profile banner placeholder">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2e2e2e"/>
+      <stop offset="100%" stop-color="#3a3a3a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="300" fill="url(#g)"/>
+  <g opacity="0.2">
+    <circle cx="150" cy="80" r="60" fill="#ffffff"/>
+    <circle cx="1050" cy="220" r="80" fill="#ffffff"/>
+  </g>
+</svg>

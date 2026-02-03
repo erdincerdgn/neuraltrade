@@ -1,0 +1,118 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+
+# Python environments & cache
+venv/
+.venv/
+__pycache__/
+.ruff_cache/
+
+# Environment variables
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS related
+.DS_Store
+Thumbs.db
+
+*.db
+*.json
+*.log
+data/
+
+# Veritabanları ve Loglar
+*.db
+*.json
+*.log
+data/
+knowledge_base/
+
+# Güvenlik ve SSL (KESİNLİKLE GİTMEMELİ)
+*.pem
+*.key
+infrastructure/nginx/ssl/
+
+# Sistem ve Geçici Dosyalar
+.DS_Store
+__pycache__/
+*.pyc
+
+# Güvenlik (Kritik - Kesinlikle gitmemeli)
+*.pem
+*.key
+infrastructure/nginx/ssl/
+
+# Veritabanı ve Hafıza
+*.db
+*.sqlite3
+data/
+knowledge_base/
+
+# Python ve Derleme Dosyaları
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Sistem Dosyaları
+.DS_Store
+.idea/
+.vscode/
+
+# Güvenlik ve SSL (Kesinlikle gitmemeli)
+*.pem
+*.key
+infrastructure/nginx/ssl/
+
+# Veritabanları ve Geçici Veriler
+*.db
+*.json
+data/
+knowledge_base/
+__pycache__/
+
+# Test ve Geçici Çıktılar
+test_output.log
+ai_output.log
+*.log
+
+# Eğitim Materyalleri (Telif Hakları Sebebiyle)
+knowledge_base/*.pdf
+
+# IDE Ayarları
+.vscode/
+.idea/
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+
+# Local configuration (Kişisel ayarlar)
+.vscode/
+.idea/
+*.swp
+*.bak
+
+# Media & Temporary files
+*.png
+*.jpg
+*.jpeg
+*.gif
+test_output.log
+ai_output.log

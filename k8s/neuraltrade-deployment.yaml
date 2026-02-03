@@ -1,0 +1,389 @@
+# ============================================================
+# NeuralTrade - Kubernetes Full Deployment
+# ============================================================
+# All 95+ features running on K8s with HPA, monitoring, secrets
+# ============================================================
+
+---
+# ============================================================
+# Namespace
+# ============================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: neuraltrade
+  labels:
+    app: neuraltrade
+    environment: production
+
+---
+# ============================================================
+# Secrets
+# ============================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: neuraltrade-secrets
+  namespace: neuraltrade
+type: Opaque
+stringData:
+  BINANCE_API_KEY: "your-api-key-here"
+  BINANCE_SECRET_KEY: "your-secret-key-here"
+  REDIS_PASSWORD: "neuraltrade-redis-password"
+  GRAFANA_PASSWORD: "neuraltrade-grafana-password"
+
+---
+# ============================================================
+# ConfigMap
+# ============================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neuraltrade-config
+  namespace: neuraltrade
+data:
+  NEURALTRADE_ENV: "production"
+  LOG_LEVEL: "INFO"
+  REDIS_URL: "redis://redis-svc:6379"
+  PYTHONPATH: "/app"
+  METRICS_PORT: "9090"
+  API_PORT: "8000"
+
+---
+# ============================================================
+# Main Bot Deployment
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neuraltrade-bot
+  namespace: neuraltrade
+  labels:
+    app: neuraltrade
+    component: bot
+spec:
+  replicas: 1  # Single instance for trading consistency
+  strategy:
+    type: Recreate  # No overlap during updates
+  selector:
+    matchLabels:
+      app: neuraltrade
+      component: bot
+  template:
+    metadata:
+      labels:
+        app: neuraltrade
+        component: bot
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+    spec:
+      serviceAccountName: neuraltrade-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: bot
+          image: neuraltrade:latest
+          imagePullPolicy: IfNotPresent
+          command: ["python", "main.py"]
+          ports:
+            - name: api
+              containerPort: 8000
+            - name: metrics
+              containerPort: 9090
+          envFrom:
+            - configMapRef:
+                name: neuraltrade-config
+            - secretRef:
+                name: neuraltrade-secrets
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "1000m"
+            limits:
+              memory: "8Gi"
+              cpu: "4000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: api
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: api
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            - name: logs
+              mountPath: /app/logs
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: neuraltrade-data-pvc
+        - name: logs
+          emptyDir: {}
+
+---
+# ============================================================
+# Pipeline Worker Deployment
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neuraltrade-pipeline
+  namespace: neuraltrade
+  labels:
+    app: neuraltrade
+    component: pipeline
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: neuraltrade
+      component: pipeline
+  template:
+    metadata:
+      labels:
+        app: neuraltrade
+        component: pipeline
+    spec:
+      containers:
+        - name: pipeline
+          image: neuraltrade:latest
+          command: ["python", "pipeline.py"]
+          envFrom:
+            - configMapRef:
+                name: neuraltrade-config
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "4Gi"
+              cpu: "2000m"
+
+---
+# ============================================================
+# Redis Deployment
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: neuraltrade
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          command:
+            - redis-server
+            - --appendonly
+            - "yes"
+            - --maxmemory
+            - "1gb"
+          ports:
+            - containerPort: 6379
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+      volumes:
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: redis-pvc
+
+---
+# ============================================================
+# Services
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: neuraltrade-svc
+  namespace: neuraltrade
+spec:
+  selector:
+    app: neuraltrade
+    component: bot
+  ports:
+    - name: api
+      port: 8000
+      targetPort: 8000
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-svc
+  namespace: neuraltrade
+spec:
+  selector:
+    app: redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+  type: ClusterIP
+
+---
+# ============================================================
+# Ingress
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: neuraltrade-ingress
+  namespace: neuraltrade
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: neuraltrade.yourdomain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: neuraltrade-svc
+                port:
+                  number: 8000
+
+---
+# ============================================================
+# Horizontal Pod Autoscaler
+# ============================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: neuraltrade-pipeline-hpa
+  namespace: neuraltrade
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: neuraltrade-pipeline
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+---
+# ============================================================
+# Persistent Volume Claims
+# ============================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: neuraltrade-data-pvc
+  namespace: neuraltrade
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: neuraltrade
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+
+---
+# ============================================================
+# ServiceAccount
+# ============================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: neuraltrade-sa
+  namespace: neuraltrade
+
+---
+# ============================================================
+# Network Policy (Security)
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: neuraltrade-network-policy
+  namespace: neuraltrade
+spec:
+  podSelector:
+    matchLabels:
+      app: neuraltrade
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - port: 8000
+    - from:
+        - podSelector:
+            matchLabels:
+              app: prometheus
+      ports:
+        - port: 9090
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - port: 6379
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - port: 443  # HTTPS to exchanges
+        - port: 80

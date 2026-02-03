@@ -1,0 +1,64 @@
+# ============================================================
+# NeuralTrade - Recording Rules
+# ============================================================
+# Pre-computed metrics for performance
+# ============================================================
+
+groups:
+  - name: trading_performance
+    interval: 30s
+    rules:
+      # Portfolio aggregations
+      - record: portfolio:total_return:1h
+        expr: sum(portfolio_return_pct) by (strategy)
+      
+      - record: portfolio:sharpe_ratio:1h
+        expr: avg(sharpe_ratio) by (strategy)
+      
+      # Risk metrics
+      - record: risk:max_drawdown:realtime
+        expr: max(max_drawdown_pct) by (portfolio)
+      
+      - record: risk:var_95:realtime
+        expr: histogram_quantile(0.95, var_distribution)
+
+  - name: system_performance
+    interval: 15s
+    rules:
+      # Request rates
+      - record: api:request_rate:5m
+        expr: rate(http_requests_total[5m])
+      
+      # Error rates
+      - record: api:error_rate:5m
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m])
+      
+      # Latency
+      - record: api:latency_p95:5m
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
+
+  - name: ml_model_performance
+    interval: 60s
+    rules:
+      # Model accuracy
+      - record: ml:prediction_accuracy:1h
+        expr: avg(model_accuracy) by (model_name)
+      
+      # Information coefficient
+      - record: ml:ic:daily
+        expr: avg_over_time(information_coefficient[24h])
+
+  - name: infrastructure_health
+    interval: 30s
+    rules:
+      # CPU usage per service
+      - record: service:cpu_usage:avg
+        expr: avg(rate(container_cpu_usage_seconds_total[5m])) by (service)
+      
+      # Memory usage per service
+      - record: service:memory_usage:avg
+        expr: avg(container_memory_usage_bytes) by (service)
+      
+      # Redis memory
+      - record: redis:memory_used_pct
+        expr: (redis_memory_used_bytes / redis_memory_max_bytes) * 100

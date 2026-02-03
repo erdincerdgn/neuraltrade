@@ -1,0 +1,120 @@
+# NeuralTrade Backend Docker Compose
+# Self-contained stack with own Redis and PostgreSQL
+
+services:
+  # ==========================================
+  # NEURALTRADE BACKEND API
+  # ==========================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: neuraltrade-be-api
+    restart: unless-stopped
+    ports:
+      - "4000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/neuraltrade_db
+      - DIRECT_URL=postgresql://postgres:postgres@postgres:5432/neuraltrade_db
+      - REDIS_URL=redis://redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - AI_BOT_URL=http://host.docker.internal:8000
+      - JWT_SECRET=${JWT_SECRET:-neuraltrade_jwt_secret_key_change_in_production}
+      - JWT_EXPIRATION_TIME=${JWT_EXPIRATION_TIME:-30d}
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - neuraltrade-be-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ==========================================
+  # TIMESCALEDB DATABASE (Time-Series Optimized)
+  # ==========================================
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: neuraltrade-be-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: neuraltrade_db
+    ports:
+      - "5433:5432"  # External port 5433 to avoid conflict
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-timescaledb.sql:/docker-entrypoint-initdb.d/init-timescaledb.sql:ro
+    networks:
+      - neuraltrade-be-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d neuraltrade_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ==========================================
+  # REDIS CACHE & QUEUE (Own instance)
+  # ==========================================
+  redis:
+    image: redis:7-alpine
+    container_name: neuraltrade-be-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6380:6379"  # External port 6380 to avoid conflict with main stack
+    volumes:
+      - redis_data:/data
+    networks:
+      - neuraltrade-be-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ==========================================
+  # DATABASE ADMIN (Optional - for development)
+  # ==========================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: neuraltrade-be-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@neuraltrade.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - neuraltrade-be-network
+    profiles:
+      - dev
+
+networks:
+  neuraltrade-be-network:
+    driver: bridge
+    name: neuraltrade-be-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  uploads_data:
+  pgadmin_data:

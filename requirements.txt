@@ -1,0 +1,93 @@
+# --- NeuralTrade Requirements ---
+
+# --- PyTorch with CUDA 12.1 Support ---
+
+--index-url https://download.pytorch.org/whl/cu121
+
+# --- Finansal Veri ve Borsa ---
+openbb
+yfinance
+ccxt
+requests
+
+# --- Performans ve Veri İşleme ---
+numpy
+pandas
+polars
+scipy
+numba
+python-dotenv
+
+# --- Teknik Analiz ve Backtest ---
+TA-Lib
+pandas-ta-openbb
+vectorbt
+backtrader
+
+# --- Yapay Zeka ve ML (Tablo Verileri) ---
+scikit-learn
+xgboost
+lightgbm
+catboost
+
+# --- Derin Öğrenme (Deep Learning) ---
+# torch
+# tensorflow==2.15.0
+torch
+torchvision
+torchaudio
+
+tf-keras
+
+# --- LLM, RAG ve Ajanlar (Modern LangChain v0.3) ---
+langchain>=0.3.0
+langchain-community>=0.3.0
+langchain-core>=0.3.0
+langchain-text-splitters>=0.3.0
+langchain-qdrant
+langchain-ollama
+langchain-openai
+transformers==4.39.3  # Pin to avoid TF import bug in newer versions
+sentence-transformers==2.7.0  # Compatible with pinned transformers
+accelerate==0.27.2 # For optimized model inference
+ollama
+tiktoken
+
+# --- RAG Destek Paketleri ---
+qdrant-client
+fastembed
+flashrank
+unstructured-client
+python-magic
+python-multipart
+
+# --- Görsellik ve Arayüz ---
+colorama
+tqdm
+streamlit
+plotly
+
+# --- Monitoring ve Infrastructure ---
+prometheus-client
+prometheus-fastapi-instrumentator
+docker
+
+# --- Redis (Signal Publishing & Caching) ---
+redis>=5.0.0,<6.0.0
+hiredis>=2.3.0  # C-based parser for performance
+
+# --- MLflow (Experiment Tracking) ---
+mlflow>=2.10.0,<3.0.0
+
+# --- Diğer ---
+schedule
+
+# --- API Server (FastAPI) ---
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+
+# --- gRPC Server (Pinned for proto compatibility) ---
+grpcio==1.62.0
+grpcio-tools==1.62.0
+protobuf>=4.25.0,<5.0.0

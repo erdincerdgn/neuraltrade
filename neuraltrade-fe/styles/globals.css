@@ -1,0 +1,167 @@
+:root {
+  --Whiteish: #faf9f4;
+  --Trust-Black: #000000;
+  --Bittersweet: #ff585a;
+  --Masculino-Blue: #152b3a;
+  --Columbia-Blue: #d0e2f0;
+  --Light-Gray: #7d7d7a;
+  --Helper-Green: #26DE81;
+  --Helper-Red: #EC1C24;
+}
+.mantine-Button-root {
+  padding: 8px 15px;
+  border-radius: 10px;
+  &[data-variant='primary'] {
+    background: var(--Trust-Black, #000);
+    color: var(--Whiteish, #faf9f4);
+
+    &:hover {
+      background: #2b2b2b;
+    }
+  }
+
+  &[data-variant='secondary'] {
+    background: var(--Bittersweet, #ff585a);
+    color: var(--Whiteish, #faf9f4);
+
+    &:hover {
+      background: #f57476;
+    }
+  }
+
+  &[data-variant='primary_reverse'] {
+    border: 1px solid var(--black-15, #00000026);
+    color: black;
+    background: none;
+    &:hover {
+      background: #fff4f40c;
+    }
+  }
+}
+
+.mantine-Text-root {
+  &[data-variant='size-3'] {
+    font-size: 10px;
+  }
+  &[data-variant='size-4'] {
+    font-size: 12px;
+  }
+  &[data-variant='size-5'] {
+    font-size: 14px;
+  }
+  &[data-variant='size-6'] {
+    font-size: 16px;
+  }
+  &[data-variant='size-7'] {
+    font-size: 18px;
+  }
+  &[data-variant='size-8'] {
+    font-size: 20px;
+  }
+
+  &[data-weight='500'] {
+    font-weight: 500;
+  }
+
+  &[data-color='secondary'] {
+    color: var(--Bittersweet, #ff585a);
+  }
+
+  &[data-color='light-gray'] {
+    color: var(--Light-Gray, #7d7d7a);
+  }
+}
+
+html,
+body {
+  background-color: var(--mantine-color-body);
+  height: 100%;
+}
+.m_26063560[data-indeterminate],
+.m_26063560 {
+  cursor: pointer;
+  &:checked {
+    background: var(--Trust-Black, #000000);
+    border-color: var(--Trust-Black, #000000);
+  }
+}
+
+.m_77c9d27d {
+  &:hover {
+    background: unset;
+  }
+}
+.m_77c9d27d:where(:disabled:not([data-loading])) {
+  background: var(--Helper-GrayLight, #d5d5d5);
+  &:hover {
+    background: var(--Helper-GrayLight, #d5d5d5);
+  }
+}
+
+.mantine-Select-root {
+  .mantine-Select-input {
+    background: var(--Whiteish, #faf9f4);
+    color: var(--black-80, rgba(0, 0, 0, 0.8));
+    font-family: var(--font-lay-grotesk);
+    font-size: 16px;
+    font-weight: 400;
+    padding: 18px 20px;
+  }
+  .mantine-Select-dropdown {
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0px 4px 16px 0px rgba(0, 0, 0, 0.06);
+    border: none;
+    margin-top: -2px;
+    padding: 0;
+  }
+  .mantine-Select-option {
+    color: var(--black-80, rgba(0, 0, 0, 0.8));
+    font-family: var(--font-lay-grotesk);
+    font-size: 16px;
+    font-weight: 400;
+    padding: 20px 18px;
+    background: #fff;
+    cursor: pointer;
+    transition:
+      background 0.2s,
+      color 0.2s;
+    &:hover {
+      background: #f7f7f7;
+    }
+    &[data-checked='true'] {
+      background: var(--Whiteish, #faf9f4);
+      font-weight: 500;
+      color: #e51d37;
+    }
+  }
+}
+
+.mantine-Autocomplete-root {
+  .mantine-Autocomplete-input {
+    background: var(--Whiteish, #faf9f4);
+    color: var(--black-80, rgba(0, 0, 0, 0.8));
+    font-family: var(--font-lay-grotesk);
+    font-size: 16px;
+    font-weight: 400;
+    padding: 18px 20px;
+  }
+}
+
+.mantine-TextInput-root {
+  label {
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 100%;
+    letter-spacing: -1%;
+    color: var(--black-80, #000000cc);
+  }
+  input {
+    height: 42px;
+  }
+}
+
+.nowrap {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

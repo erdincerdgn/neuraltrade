@@ -1,0 +1,101 @@
+.header {
+  position: fixed;
+  top: 0;
+  left: 260px;
+  right: 0;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  // background: linear-gradient(90deg, #1d4ed8 0%, #1e3a8a 100%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  // color: #f9fafb;
+  z-index: 100;
+  // border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  font-family: "Lay Grotesk", sans-serif;
+}
+
+/* Left: Page Title */
+.pageTitle {
+  font-size: 22px;
+  font-weight: 600;
+  // color: #f9fafb;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Slightly lighter subtitle tone */
+.pageTitle span {
+  font-weight: 400;
+  // color: #dbeafe; /* soft light blue */
+}
+
+/* Right: User Section */
+.userSection {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  // background: rgba(255, 255, 255, 0.1);
+  padding: 8px 14px;
+  border-radius: 14px;
+  transition: background 0.3s ease;
+}
+
+// .userSection:hover {
+//   background: rgba(255, 255, 255, 0.18);
+// }
+
+/* Avatar (initials or icon) */
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  // background-color: #93c5fd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  // color: #1e3a8a;
+  font-weight: 700;
+  font-size: 17px;
+}
+
+/* Username + Role */
+.username {
+  // color: #f9fafb;
+  font-size: 15px;
+  font-weight: 500;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.role {
+  // color: #c7d2fe;
+  font-size: 11px;
+  font-weight: 400;
+  margin: 0;
+  letter-spacing: 0.4px;
+}
+
+/* Icons (optional) */
+.userActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.userActions svg {
+  width: 18px;
+  height: 18px;
+  // color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+// .userActions svg:hover {
+//   color: #fff;
+// }

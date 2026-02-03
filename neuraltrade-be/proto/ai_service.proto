@@ -1,0 +1,870 @@
+syntax = "proto3";
+
+package neuraltrade.ai.v2;
+
+option go_package = "neuraltrade/ai/v2";
+option java_package = "com.neuraltrade.ai.v2";
+option java_multiple_files = true;
+
+// ============================================================
+// NeuralTrade AI Service v2.0
+// ============================================================
+// Institutional-Grade gRPC Service for Quantitative Trading
+// Layer 4: Intelligence & Ops
+// 
+// New Features:
+// - Volatility Surface Engine (SABR, SVI, Dupire)
+// - Advanced Risk Metrics (CVaR, Expected Shortfall)
+// - Portfolio Optimization (Black-Litterman, HRP)
+// - Real-time Greeks Calculation
+// - Market Regime Detection
+// - Arbitrage Detection
+// ============================================================
+
+// ============================================================
+// MAIN SERVICE DEFINITION
+// ============================================================
+
+service AIService {
+    // ==================== Signal & Prediction ====================
+    rpc PredictSignal(SignalRequest) returns (SignalResponse);
+    rpc StreamSignals(SignalStreamRequest) returns (stream SignalResponse);
+    
+    // ==================== Model Management ====================
+    rpc SelectModel(ModelSelectionRequest) returns (ModelSelectionResponse);
+    rpc ListModels(ListModelsRequest) returns (ListModelsResponse);
+    rpc GetModelMetrics(ModelMetricsRequest) returns (ModelMetricsResponse);
+    
+    // ==================== Strategy Routing ====================
+    rpc RouteStrategy(StrategyRequest) returns (StrategyResponse);
+    rpc ListStrategies(ListStrategiesRequest) returns (ListStrategiesResponse);
+    rpc BacktestStrategy(BacktestRequest) returns (BacktestResponse);
+    
+    // ==================== Volatility Surface ====================
+    rpc CalibrateVolatilitySurface(VolSurfaceRequest) returns (VolSurfaceResponse);
+    rpc GetImpliedVolatility(ImpliedVolRequest) returns (ImpliedVolResponse);
+    rpc GetLocalVolatility(LocalVolRequest) returns (LocalVolResponse);
+    rpc GetSkewMetrics(SkewMetricsRequest) returns (SkewMetricsResponse);
+    rpc CheckSurfaceArbitrage(ArbitrageCheckRequest) returns (ArbitrageCheckResponse);
+    
+    // ==================== Options & Greeks ====================
+    rpc CalculateGreeks(GreeksRequest) returns (GreeksResponse);
+    rpc PriceOption(OptionPricingRequest) returns (OptionPricingResponse);
+    rpc GetOptionsChain(OptionsChainRequest) returns (OptionsChainResponse);
+    
+    // ==================== Risk Management ====================
+    rpc CalculateRiskMetrics(RiskMetricsRequest) returns (RiskMetricsResponse);
+    rpc CalculateVaR(VaRRequest) returns (VaRResponse);
+    rpc CalculateCVaR(CVaRRequest) returns (CVaRResponse);
+    rpc StressTest(StressTestRequest) returns (StressTestResponse);
+    
+    // ==================== Portfolio Optimization ====================
+    rpc OptimizePortfolio(PortfolioOptRequest) returns (PortfolioOptResponse);
+    rpc CalculateHRP(HRPRequest) returns (HRPResponse);
+    rpc BlackLitterman(BlackLittermanRequest) returns (BlackLittermanResponse);
+    
+    // ==================== Market Analysis ====================
+    rpc DetectRegime(RegimeDetectionRequest) returns (RegimeDetectionResponse);
+    rpc AnalyzeSentiment(SentimentRequest) returns (SentimentResponse);
+    rpc GetMarketMicrostructure(MicrostructureRequest) returns (MicrostructureResponse);
+    
+    // ==================== Health & Monitoring ====================
+    rpc HealthCheck(HealthRequest) returns (HealthResponse);
+    rpc GetServiceMetrics(MetricsRequest) returns (MetricsResponse);
+}
+
+// ============================================================
+// COMMON ENUMS
+// ============================================================
+
+enum OptionType {
+    OPTION_TYPE_UNSPECIFIED = 0;
+    OPTION_TYPE_CALL = 1;
+    OPTION_TYPE_PUT = 2;
+}
+
+enum SignalAction {
+    SIGNAL_ACTION_UNSPECIFIED = 0;
+    SIGNAL_ACTION_BUY = 1;
+    SIGNAL_ACTION_SELL = 2;SIGNAL_ACTION_HOLD = 3;
+    SIGNAL_ACTION_CLOSE = 4;
+}
+
+enum MarketRegime {
+    MARKET_REGIME_UNSPECIFIED = 0;
+    MARKET_REGIME_TRENDING_UP = 1;
+    MARKET_REGIME_TRENDING_DOWN = 2;
+    MARKET_REGIME_RANGING = 3;
+    MARKET_REGIME_VOLATILE = 4;
+    MARKET_REGIME_CRISIS = 5;
+}
+
+enum ModelType {
+    MODEL_TYPE_UNSPECIFIED = 0;
+    MODEL_TYPE_LSTM = 1;
+    MODEL_TYPE_TRANSFORMER = 2;
+    MODEL_TYPE_DRL = 3;
+    MODEL_TYPE_ENSEMBLE = 4;
+    MODEL_TYPE_XGB = 5;
+    MODEL_TYPE_LIGHTGBM = 6;
+}
+
+enum VolatilityModel {
+    VOL_MODEL_UNSPECIFIED = 0;
+    VOL_MODEL_SABR = 1;
+    VOL_MODEL_SVI = 2;
+    VOL_MODEL_DUPIRE = 3;
+    VOL_MODEL_HESTON = 4;
+}
+
+enum RiskProfile {
+    RISK_PROFILE_UNSPECIFIED = 0;
+    RISK_PROFILE_CONSERVATIVE = 1;
+    RISK_PROFILE_MODERATE = 2;
+    RISK_PROFILE_AGGRESSIVE = 3;
+}
+
+enum ExecutionType {
+    EXECUTION_TYPE_UNSPECIFIED = 0;
+    EXECUTION_TYPE_AGGRESSIVE = 1;
+    EXECUTION_TYPE_NEUTRAL = 2;
+    EXECUTION_TYPE_CONSERVATIVE = 3;
+    EXECUTION_TYPE_TWAP = 4;
+    EXECUTION_TYPE_VWAP = 5;
+}
+
+enum OptimizationMethod {
+    OPT_METHOD_UNSPECIFIED = 0;
+    OPT_METHOD_MEAN_VARIANCE = 1;
+    OPT_METHOD_BLACK_LITTERMAN = 2;
+    OPT_METHOD_HRP = 3;
+    OPT_METHOD_RISK_PARITY = 4;
+    OPT_METHOD_MAX_SHARPE = 5;
+    OPT_METHOD_MIN_VARIANCE = 6;
+    OPT_METHOD_MAX_DIVERSIFICATION = 7;
+}
+
+// ============================================================
+// SIGNAL PREDICTION
+// ============================================================
+
+message SignalRequest {
+    string symbol = 1;
+    string timeframe = 2;
+    repeated double prices = 3;
+    repeated double volumes = 4;
+    repeated double high_prices = 5;
+    repeated double low_prices = 6;
+    repeated double open_prices = 7;
+    map<string, double> indicators = 8;
+    string model_id = 9;
+    MarketRegime current_regime = 10;
+    double current_volatility = 11;
+}
+
+message SignalResponse {
+    SignalAction action = 1;
+    double confidence = 2;
+    double target_price = 3;
+    double stop_loss = 4;
+    double take_profit = 5;
+    string reasoning = 6;
+    map<string, double> features = 7;
+    int64 timestamp = 8;double risk_reward_ratio = 9;
+    double expected_return = 10;
+    double max_drawdown_estimate = 11;
+    repeated SignalContributor contributors = 12;
+}
+
+message SignalContributor {
+    string name = 1;
+    double weight = 2;
+    double signal_value = 3;
+}
+
+message SignalStreamRequest {
+    repeated string symbols = 1;
+    string timeframe = 2;
+    string model_id = 3;
+    int32 update_interval_ms = 4;
+}
+
+// ============================================================
+// MODEL MANAGEMENT
+// ============================================================
+
+message ModelSelectionRequest {
+    string symbol = 1;
+    MarketRegime regime = 2;
+    double volatility = 3;
+    double liquidity = 4;
+    map<string, string> context = 5;
+}
+
+message ModelSelectionResponse {
+    string model_id = 1;
+    string model_name = 2;
+    double confidence = 3;
+    string reasoning = 4;
+    map<string, string> metadata = 5;
+    ModelPerformance performance = 6;
+}
+
+message ModelPerformance {
+    double accuracy = 1;
+    double precision = 2;
+    double recall = 3;
+    double f1_score = 4;
+    double sharpe_ratio = 5;
+    double sortino_ratio = 6;
+    int64 total_predictions = 7;
+}
+
+message ListModelsRequest {
+    string filter = 1;
+    ModelType type_filter = 2;
+    bool active_only = 3;
+}
+
+message ListModelsResponse {
+    repeated ModelInfo models = 1;
+}
+
+message ModelInfo {
+    string id = 1;
+    string name = 2;
+    ModelType type = 3;
+    string version = 4;
+    bool is_active = 5;
+    double accuracy = 6;
+    int64 last_trained = 7;
+    repeated string supported_symbols = 8;
+    repeated string supported_timeframes = 9;
+    ModelPerformance performance = 10;
+}
+
+message ModelMetricsRequest {
+    string model_id = 1;
+    int64 start_time = 2;
+    int64 end_time = 3;
+}
+
+message ModelMetricsResponse {
+    string model_id = 1;
+    ModelPerformance performance = 2;
+    repeated PredictionRecord recent_predictions = 3;
+    ConfusionMatrix confusion_matrix = 4;
+}
+
+message PredictionRecord {
+    int64 timestamp = 1;
+    SignalAction predicted = 2;
+    SignalAction actual = 3;
+    double confidence = 4;
+    double pnl = 5;
+}
+
+message ConfusionMatrix {
+    int32 true_positive = 1;
+    int32 true_negative = 2;
+    int32 false_positive = 3;
+    int32 false_negative = 4;
+}
+
+// ============================================================
+// STRATEGY ROUTING
+// ============================================================
+
+message StrategyRequest {
+    string symbol = 1;
+    SignalAction signal_action = 2;
+    double confidence = 3;
+    map<string, string> market_context = 4;
+    RiskProfile user_risk_profile = 5;
+    double account_balance = 6;
+    double current_exposure = 7;
+}
+
+message StrategyResponse {
+    string strategy_id = 1;
+    string strategy_name = 2;
+    ExecutionType execution_type = 3;
+    double position_size = 4;
+    double position_size_modifier = 5;
+    map<string, string> parameters = 6;
+    string reasoning = 7;
+    RiskLimits risk_limits = 8;
+}
+
+message RiskLimits {
+    double max_position_size = 1;
+    double max_daily_loss = 2;
+    double max_drawdown = 3;
+    double stop_loss_pct = 4;
+    double take_profit_pct = 5;
+}
+
+message ListStrategiesRequest {
+    string filter = 1;
+    MarketRegime regime_filter = 2;
+}
+
+message ListStrategiesResponse {
+    repeated StrategyInfo strategies = 1;
+}
+
+message StrategyInfo {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    repeated MarketRegime supported_regimes = 4;
+    bool is_active = 5;StrategyPerformance performance = 6;
+}
+
+message StrategyPerformance {
+    double total_return = 1;
+    double sharpe_ratio = 2;
+    double sortino_ratio = 3;
+    double max_drawdown = 4;
+    double win_rate = 5;
+    double profit_factor = 6;
+    int32 total_trades = 7;
+}
+
+message BacktestRequest {
+    string strategy_id = 1;
+    string symbol = 2;
+    int64 start_time = 3;
+    int64 end_time = 4;
+    double initial_capital = 5;
+    map<string, string> parameters = 6;
+}
+
+message BacktestResponse {
+    StrategyPerformance performance = 1;
+    repeated TradeRecord trades = 2;EquityCurve equity_curve = 3;
+    DrawdownAnalysis drawdown_analysis = 4;
+}
+
+message TradeRecord {
+    int64 entry_time = 1;
+    int64 exit_time = 2;
+    SignalAction action = 3;
+    double entry_price = 4;
+    double exit_price = 5;
+    double position_size = 6;
+    double pnl = 7;
+    double pnl_pct = 8;
+}
+
+message EquityCurve {
+    repeated int64 timestamps = 1;
+    repeated double values = 2;
+    repeated double returns = 3;
+}
+
+message DrawdownAnalysis {
+    double max_drawdown = 1;
+    double avg_drawdown = 2;
+    int64 max_drawdown_duration = 3;
+    repeated DrawdownPeriod periods = 4;
+}
+
+message DrawdownPeriod {
+    int64 start_time = 1;
+    int64 end_time = 2;
+    double depth = 3;
+}
+
+// ============================================================
+// VOLATILITY SURFACE (NEW)
+// ============================================================
+
+message VolSurfaceRequest {
+    string symbol = 1;
+    double spot_price = 2;
+    double risk_free_rate = 3;
+    double dividend_yield = 4;
+    VolatilityModel model = 5;
+    repeated VolSurfacePoint market_data = 6;
+    double beta = 7;
+}
+
+message VolSurfacePoint {
+    double strike = 1;
+    double expiry = 2;
+    double volatility = 3;
+    double bid_vol = 4;
+    double ask_vol = 5;
+    OptionType option_type = 6;
+}
+
+message VolSurfaceResponse {
+    bool success = 1;
+    VolatilityModel model = 2;
+    double rmse = 3;
+    double max_error = 4;
+    double calibration_time_ms = 5;
+    repeated CalibratedSmile smiles = 6;
+    string error_message = 7;
+}
+
+message CalibratedSmile {
+    double expiry = 1;
+    double forward = 2;
+    double atm_vol = 3;
+    SABRParams sabr_params = 4;
+    SVIParams svi_params = 5;
+}
+
+message SABRParams {
+    double alpha = 1;
+    double beta = 2;
+    double rho = 3;
+    double nu = 4;
+}
+
+message SVIParams {
+    double a = 1;
+    double b = 2;
+    double rho = 3;
+    double m = 4;
+    double sigma = 5;
+}
+
+message ImpliedVolRequest {
+    string symbol = 1;
+    double strike = 2;
+    double expiry = 3;
+    double spot_price = 4;
+}
+
+message ImpliedVolResponse {
+    double implied_volatility = 1;
+    double forward_price = 2;
+    double moneyness = 3;
+    double log_moneyness = 4;
+}
+
+message LocalVolRequest {
+    string symbol = 1;
+    double strike_min = 2;
+    double strike_max = 3;
+    double expiry_min = 4;
+    double expiry_max = 5;
+    int32 num_strikes = 6;
+    int32 num_expiries = 7;
+}
+
+message LocalVolResponse {
+    repeated double strikes = 1;
+    repeated double expiries = 2;
+    repeated double local_vols = 3;
+    repeated double implied_vols = 4;
+}
+
+message SkewMetricsRequest {
+    string symbol = 1;
+    double expiry = 2;
+}
+
+message SkewMetricsResponse {
+    double expiry = 1;
+    double atm_vol = 2;
+    double skew_25d = 3;
+    double skew_10d = 4;
+    double risk_reversal_25d = 5;
+    double butterfly_25d = 6;
+    double smile_curvature = 7;
+}
+
+message ArbitrageCheckRequest {
+    string symbol = 1;
+}
+
+message ArbitrageCheckResponse {
+    bool has_calendar_arbitrage = 1;
+    bool has_butterfly_arbitrage = 2;
+    repeated ArbitragePoint arbitrage_points = 3;double max_arbitrage_amount = 4;
+}
+
+message ArbitragePoint {
+    double strike = 1;
+    double expiry = 2;
+    string arbitrage_type = 3;
+    double amount = 4;
+}
+
+// ============================================================
+// OPTIONS & GREEKS (NEW)
+// ============================================================
+
+message GreeksRequest {
+    string symbol = 1;
+    OptionType option_type = 2;
+    double spot_price = 3;
+    double strike = 4;
+    double expiry = 5;
+    double risk_free_rate = 6;
+    double dividend_yield = 7;
+    double volatility = 8;
+    string pricing_model = 9;
+}
+
+message GreeksResponse {
+    double delta = 1;
+    double gamma = 2;
+    double theta = 3;
+    double vega = 4;
+    double rho = 5;
+    double vanna = 6;
+    double volga = 7;
+    double charm = 8;
+    double veta = 9;
+    double speed = 10;
+    double zomma = 11;
+    double color = 12;
+}
+
+message OptionPricingRequest {
+    string symbol = 1;
+    OptionType option_type = 2;
+    double spot_price = 3;
+    double strike = 4;
+    double expiry = 5;
+    double risk_free_rate = 6;
+    double dividend_yield = 7;
+    double volatility = 8;
+    string pricing_model = 9;
+    bool american_style = 10;
+}
+
+message OptionPricingResponse {
+    double price = 1;
+    double intrinsic_value = 2;
+    double time_value = 3;
+    GreeksResponse greeks = 4;double implied_volatility = 5;
+    double bid_price = 6;
+    double ask_price = 7;
+}
+
+message OptionsChainRequest {
+    string symbol = 1;
+    double spot_price = 2;
+    repeated double expiries = 3;
+    int32 num_strikes = 4;
+    double strike_range_pct = 5;
+}
+
+message OptionsChainResponse {
+    repeated OptionChainExpiry expiries = 1;
+}
+
+message OptionChainExpiry {
+    double expiry = 1;
+    repeated OptionChainStrike strikes = 2;
+}
+
+message OptionChainStrike {
+    double strike = 1;
+    OptionPricingResponse call = 2;
+    OptionPricingResponse put = 3;
+}
+
+// ============================================================
+// RISK MANAGEMENT (NEW)
+// ============================================================
+
+message RiskMetricsRequest {
+    repeated double returns = 1;
+    double confidence_level = 2;
+    int32 time_horizon = 3;
+    double risk_free_rate = 4;
+}
+
+message RiskMetricsResponse {
+    double volatility = 1;
+    double var_95 = 2;
+    double var_99 = 3;
+    double cvar_95 = 4;
+    double cvar_99 = 5;
+    double sharpe_ratio = 6;
+    double sortino_ratio = 7;
+    double calmar_ratio = 8;
+    double max_drawdown = 9;
+    double skewness = 10;
+    double kurtosis = 11;
+    double omega_ratio = 12;
+    double tail_ratio = 13;
+}
+
+message VaRRequest {
+    repeated double returns = 1;
+    double confidence_level = 2;
+    int32 time_horizon = 3;
+    string method = 4;
+    double portfolio_value = 5;
+}
+
+message VaRResponse {
+    double var_amount = 1;
+    double var_percentage = 2;
+    string method = 3;
+    double confidence_level = 4;
+    int32 time_horizon = 5;
+}
+
+message CVaRRequest {
+    repeated double returns = 1;
+    double confidence_level = 2;
+    int32 time_horizon = 3;
+    double portfolio_value = 4;
+}
+
+message CVaRResponse {
+    double cvar_amount = 1;
+    double cvar_percentage = 2;
+    double var_amount = 3;
+    double expected_shortfall = 4;
+    double tail_loss_mean = 5;
+}
+
+message StressTestRequest {
+    repeated string symbols = 1;
+    repeated double positions = 2;
+    repeated StressScenario scenarios = 3;
+}
+
+message StressScenario {
+    string name = 1;
+    map<string, double> price_shocks = 2;
+    double volatility_shock = 3;
+    double correlation_shock = 4;
+}
+
+message StressTestResponse {
+    repeated StressTestResult results = 1;
+    double worst_case_loss = 2;
+    string worst_scenario = 3;
+}
+
+message StressTestResult {
+    string scenario_name = 1;
+    double portfolio_pnl = 2;
+    double portfolio_pnl_pct = 3;
+    map<string, double> position_pnls = 4;
+}
+
+// ============================================================
+// PORTFOLIO OPTIMIZATION (NEW)
+// ============================================================
+
+message PortfolioOptRequest {
+    repeated string symbols = 1;
+    repeated double expected_returns = 2;
+    repeated double covariance_matrix = 3;
+    OptimizationMethod method = 4;
+    double target_return = 5;
+    double risk_free_rate = 6;
+    PortfolioConstraints constraints = 7;
+}
+
+message PortfolioConstraints {
+    double min_weight = 1;
+    double max_weight = 2;
+    double max_sector_weight = 3;
+    repeated string sector_assignments = 4;
+    bool long_only = 5;
+}
+
+message PortfolioOptResponse {
+    repeated double weights = 1;
+    double expected_return = 2;
+    double expected_volatility = 3;
+    double sharpe_ratio = 4;
+    double diversification_ratio = 5;
+    map<string, double> symbol_weights = 6;
+    EfficientFrontier efficient_frontier = 7;
+}
+
+message EfficientFrontier {
+    repeated double returns = 1;
+    repeated double volatilities = 2;
+    repeated double sharpe_ratios = 3;
+}
+
+message HRPRequest {
+    repeated string symbols = 1;
+    repeated double returns_matrix = 2;
+    int32 n_periods = 3;
+    int32 n_assets = 4;
+    string linkage_method = 5;
+}
+
+message HRPResponse {
+    repeated double weights = 1;
+    map<string, double> symbol_weights = 2;
+    repeated ClusterInfo clusters = 3;
+    double portfolio_variance = 4;
+}
+
+message ClusterInfo {
+    repeated string symbols = 1;
+    double intra_cluster_correlation = 2;
+    int32 cluster_id = 3;
+}
+
+message BlackLittermanRequest {
+    repeated string symbols = 1;
+    repeated double market_caps = 2;
+    repeated double covariance_matrix = 3;
+    double risk_aversion = 4;
+    double tau = 5;
+    repeated ViewInfo views = 6;
+}
+
+message ViewInfo {
+    repeated string symbols = 1;
+    repeated double weights = 2;
+    double expected_return = 3;
+    double confidence = 4;
+}
+
+message BlackLittermanResponse {
+    repeated double posterior_returns = 1;
+    repeated double optimal_weights = 2;
+    map<string, double> symbol_weights = 3;
+    repeated double prior_returns = 4;
+    double expected_return = 5;
+    double expected_volatility = 6;
+}
+
+// ============================================================
+// MARKET ANALYSIS
+// ============================================================
+
+message RegimeDetectionRequest {
+    string symbol = 1;
+    repeated double prices = 2;
+    repeated double volumes = 3;
+    int32 lookback_period = 4;
+}
+
+message RegimeDetectionResponse {
+    MarketRegime current_regime = 1;
+    double confidence = 2;
+    repeated RegimeProbability probabilities = 3;
+    int64 regime_start_time = 4;
+    int32 regime_duration_bars = 5;
+    RegimeTransitionMatrix transition_matrix = 6;
+}
+
+message RegimeProbability {
+    MarketRegime regime = 1;
+    double probability = 2;
+}
+
+message RegimeTransitionMatrix {
+    repeated double matrix = 1;
+    repeated MarketRegime states = 2;
+}
+
+message SentimentRequest {
+    string symbol = 1;
+    repeated string texts = 2;
+    string source = 3;
+}
+
+message SentimentResponse {
+    double overall_sentiment = 1;
+    double bullish_ratio = 2;
+    double bearish_ratio = 3;
+    double neutral_ratio = 4;
+    repeated SentimentItem items = 5;
+    SentimentTrend trend = 6;
+}
+
+message SentimentItem {
+    string text = 1;
+    double score = 2;
+    string label = 3;
+    double confidence = 4;
+    repeated string keywords = 5;
+}
+
+message SentimentTrend {
+    double momentum = 1;
+    double acceleration = 2;
+    int32 bullish_streak = 3;
+    int32 bearish_streak = 4;
+}
+
+message MicrostructureRequest {
+    string symbol = 1;
+    repeated double bid_prices = 2;
+    repeated double ask_prices = 3;
+    repeated double bid_sizes = 4;
+    repeated double ask_sizes = 5;
+    repeated double trade_prices = 6;
+    repeated double trade_sizes = 7;
+    repeated int64 timestamps = 8;
+}
+
+message MicrostructureResponse {
+    double bid_ask_spread = 1;
+    double effective_spread = 2;
+    double realized_spread = 3;
+    double price_impact = 4;
+    double kyle_lambda = 5;
+    double amihud_illiquidity = 6;
+    double order_imbalance = 7;
+    double vpin = 8;
+    ToxicityMetrics toxicity = 9;
+}
+
+message ToxicityMetrics {
+    double informed_trading_probability = 1;
+    double adverse_selection_cost = 2;
+    double flow_toxicity = 3;
+}
+
+// ============================================================
+// HEALTH & MONITORING
+// ============================================================
+
+message HealthRequest {}
+
+message HealthResponse {
+    bool healthy = 1;
+    string version = 2;
+    int64 uptime_seconds = 3;
+    map<string, bool> services = 4;
+    SystemResources resources = 5;
+}
+
+message SystemResources {
+    double cpu_usage = 1;
+    double memory_usage = 2;
+    double gpu_usage = 3;
+    int64 active_connections = 4;
+}
+
+message MetricsRequest {
+    int64 start_time = 1;
+    int64 end_time = 2;
+}
+
+message MetricsResponse {
+    int64 total_requests = 1;
+    double avg_latency_ms = 2;
+    double p99_latency_ms = 3;
+    map<string, int64> requests_by_method = 4;
+    map<string, double> error_rates = 5;
+    repeated LatencyBucket latency_histogram = 6;
+}
+
+message LatencyBucket {
+    double lower_bound_ms = 1;
+    double upper_bound_ms = 2;
+    int64 count = 3;
+}

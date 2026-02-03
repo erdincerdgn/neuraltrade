@@ -1,0 +1,150 @@
+# ============================================================
+# NeuralTrade - Alerting Rules
+# ============================================================
+# Alert definitions for critical events
+# ============================================================
+
+groups:
+  - name: trading_alerts
+    interval: 30s
+    rules:
+      # Critical: Large drawdown
+      - alert: LargeDrawdown
+        expr: max_drawdown_pct > 10
+        for: 1m
+        labels:
+          severity: critical
+          tier: trading
+        annotations:
+          summary: "Large drawdown detected: {{ $value }}%"
+          description: "Portfolio {{ $labels.portfolio }} has drawdown > 10%"
+
+      # Warning: Sharpe ratio declining
+      - alert: SharpeDeclining
+        expr: sharpe_ratio < 1.0
+        for: 5m
+        labels:
+          severity: warning
+          tier: trading
+        annotations:
+          summary: "Sharpe ratio below 1.0"
+          description: "Strategy {{ $labels.strategy }} Sharpe = {{ $value }}"
+
+      # Critical: Circuit breaker triggered
+      - alert: CircuitBreakerTriggered
+        expr: circuit_breaker_active == 1
+        for: 0s
+        labels:
+          severity: critical
+          tier: trading
+        annotations:
+          summary: "Circuit breaker activated"
+          description: "Trading halted on {{ $labels.exchange }}"
+
+  - name: system_alerts
+    interval: 15s
+    rules:
+      # Critical: Service down
+      - alert: ServiceDown
+        expr: up{job=~"neuraltrade.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          tier: infrastructure
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "{{ $labels.instance }} has been down for > 1 minute"
+
+      # Warning: High error rate
+      - alert: HighErrorRate
+        expr: api:error_rate:5m > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          tier: infrastructure
+        annotations:
+          summary: "High API error rate: {{ $value | humanizePercentage }}"
+          description: "Error rate > 5% for 5 minutes"
+
+      # Warning: High latency
+      - alert: HighLatency
+        expr: api:latency_p95:5m > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          tier: infrastructure
+        annotations:
+          summary: "High API latency: {{ $value }}s"
+          description: "P95 latency > 1s for 5 minutes"
+
+  - name: infrastructure_alerts
+    interval: 15s
+    rules:
+      # Critical: High CPU
+      - alert: HighCPUUsage
+        expr: service:cpu_usage:avg > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          tier: infrastructure
+        annotations:
+          summary: "High CPU usage: {{ $value | humanizePercentage }}"
+          description: "Service {{ $labels.service }} CPU > 90%"
+
+      # Critical: High memory
+      - alert: HighMemoryUsage
+        expr: (service:memory_usage:avg / 8589934592) > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          tier: infrastructure
+        annotations:
+          summary: "High memory usage: {{ $value | humanizePercentage }}"
+          description: "Service {{ $labels.service }} memory > 90% of 8GB"
+
+      # Critical: Redis memory
+      - alert: RedisMemoryHigh
+        expr: redis:memory_used_pct > 90
+        for: 5m
+        labels:
+          severity: warning
+          tier: infrastructure
+        annotations:
+          summary: "Redis memory usage: {{ $value }}%"
+          description: "Redis using > 90% of max memory"
+
+      # Critical: Disk space
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.10
+        for: 5m
+        labels:
+          severity: critical
+          tier: infrastructure
+        annotations:
+          summary: "Disk space < 10%"
+          description: "{{ $labels.device }} on {{ $labels.instance }}"
+
+  - name: data_alerts
+    interval: 60s
+    rules:
+      # Warning: Stale data
+      - alert: StaleMarketData
+        expr: (time() - market_data_last_update_timestamp) > 300
+        for: 2m
+        labels:
+          severity: warning
+          tier: data
+        annotations:
+          summary: "Market data is stale"
+          description: "No updates for {{ $labels.symbol }} in 5+ minutes"
+
+      # Warning: Data quality
+      - alert: DataQualityIssue
+        expr: data_quality_score < 0.8
+        for: 5m
+        labels:
+          severity: warning
+          tier: data
+        annotations:
+          summary: "Data quality degraded: {{ $value }}"
+          description: "Data quality score < 0.8 for {{ $labels.source }}"
