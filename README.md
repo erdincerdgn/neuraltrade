@@ -11,7 +11,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
 [![CUDA](https://img.shields.io/badge/CUDA-12.1-76B900?style=flat-square&logo=nvidia&logoColor=white)](https://developer.nvidia.com/cuda-toolkit)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-Ready-326CE5?style=flat-square&logo=kubernetes&logoColor=white)](https://kubernetes.io/)
-[![License](https://img.shields.io/badge/License-Proprietary-red?style=flat-square)](LICENSE)
+[![License](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](LICENSE)
 
 **Enterprise-Grade Quantitative Trading Platform with AI/ML Integration**
 
@@ -1613,3 +1613,4 @@ This project is proprietary software. All rights reserved.
 📧 erdincerdogan61@gmail.com | 🔗 [LinkedIn](https://www.linkedin.com/in/erdincerdgn/) | 💻 [GitHub](https://github.com/erdincerdgn)
 
 </div>
+
