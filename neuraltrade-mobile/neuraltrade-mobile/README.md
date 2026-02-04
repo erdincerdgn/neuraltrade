@@ -1,50 +1,226 @@
-# Welcome to your Expo app 👋
+# NeuralTrade Mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**Layer 1: Presentation & Client Layer** - React Native/Expo Mobile App
 
-## Get started
+AI-powered trading platform mobile application built with Expo, featuring real-time market data, AI trading signals, and portfolio management.
 
-1. Install dependencies
+## 🏗️ Architecture
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+Layer 1: Mobile App (Expo/React Native)
+    ↓ HTTPS / WebSocket
+Layer 2: API Gateway (Nginx)
+    ↓
+Layer 3: NestJS Backend (Port 4000)
+    ↓ gRPC
+Layer 4: Python AI Engine (Port 8000/50051)
+    ↓
+Layer 5: Data Persistence (PostgreSQL, Redis)
+    ↓
+Layer 6: Vector DB & Observability (Qdrant, Prometheus)
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## 🚀 Quick Start
 
-## Learn more
+```bash
+# Install dependencies
+npm install
 
-To learn more about developing your project with Expo, look at the following resources:
+# Start development server
+npm start
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+# Run on specific platform
+npm run ios      # iOS Simulator
+npm run android  # Android Emulator
+npm run web      # Web Browser
+```
 
-## Join the community
+## 📁 Project Structure
 
-Join our community of developers creating universal apps.
+```
+neuraltrade-mobile/
+├── app/                    # Expo Router file-based routing
+│   ├── _layout.tsx         # Root layout with providers
+│   ├── modal.tsx           # Modal screen
+│   └── (tabs)/             # Bottom tab navigation
+│       ├── _layout.tsx     # Tab bar configuration
+│       ├── index.tsx       # Dashboard screen
+│       ├── ai-signals.tsx  # AI trading signals
+│       ├── trade.tsx       # Order execution
+│       └── portfolio.tsx   # Positions & P&L
+├── components/             # Reusable UI components
+│   ├── screen-wrapper.tsx  # SafeArea + Dark theme wrapper
+│   ├── signal-card.tsx     # AI signal display card
+│   └── ui/                 # Base UI components
+├── hooks/                  # Custom React hooks
+│   ├── use-socket.ts       # WebSocket connection hook
+│   └── use-market-data.ts  # React Query market data hook
+├── store/                  # Zustand state management
+│   ├── market.store.ts     # Real-time market data
+│   ├── portfolio.store.ts  # Portfolio state (persisted)
+│   └── signals.store.ts    # AI signals state
+├── services/               # API & Socket services
+│   ├── api.ts              # Axios client for REST API
+│   └── socket.ts           # Socket.io for real-time
+├── constants/              # Theme & configuration
+│   └── theme.ts            # Neural-Dark theme colors
+└── config files
+    ├── tailwind.config.js  # NativeWind configuration
+    ├── metro.config.js     # Metro bundler with NativeWind
+    └── babel.config.js     # Babel with Reanimated plugin
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## 🎨 Design System
+
+### Neural-Dark Theme
+
+| Element         | Color     | Usage                |
+|-----------------|-----------|----------------------|
+| Background      | `#000000` | Screen backgrounds   |
+| Card            | `#1A1A1A` | Card surfaces        |
+| Border          | `#2A2A2A` | Subtle borders       |
+| Primary (Matrix)| `#00FF41` | Accents, bullish     |
+| Bearish         | `#FF3B30` | Sell signals, losses |
+| Neutral         | `#FFD60A` | Warnings, hold       |
+
+### Typography
+
+- **Headings**: System font, bold weight
+- **Terminal**: Monospace for agent thoughts
+- **Body**: System default
+
+## 🔌 Backend Integration
+
+### REST API (Layer 3 - NestJS)
+
+```typescript
+// services/api.ts
+const API_URL = 'http://localhost:4000/api/v1';
+
+// Endpoints
+/auth/login          # Authentication
+/portfolio/summary   # Portfolio data
+/market/quote/:sym   # Market quotes
+/trade/order         # Order execution
+/signals/latest      # AI signals
+```
+
+### WebSocket (Real-time)
+
+```typescript
+// hooks/use-socket.ts
+const socket = io('http://localhost:4000');
+
+// Events
+socket.on('market:tick', (tick) => {});
+socket.on('signal:new', (signal) => {});
+socket.on('agent:thought', (thought) => {});
+```
+
+## 📦 Key Dependencies
+
+| Package                | Purpose                          |
+|------------------------|----------------------------------|
+| `expo-router`          | File-based navigation            |
+| `nativewind`           | Tailwind CSS for React Native    |
+| `lucide-react-native`  | Icons                            |
+| `socket.io-client`     | Real-time WebSocket              |
+| `@tanstack/react-query`| Server state management          |
+| `zustand`              | Client state management          |
+| `react-native-reanimated` | Smooth animations             |
+| `react-native-webview` | TradingView chart embedding      |
+
+## 🛡️ SafeArea Handling
+
+All screens use `ScreenWrapper` component for consistent safe area handling:
+
+```tsx
+import { ScreenWrapper } from '@/components/screen-wrapper';
+
+export default function MyScreen() {
+  return (
+    <ScreenWrapper>
+      {/* Content automatically respects notch/home indicator */}
+    </ScreenWrapper>
+  );
+}
+```
+
+## 📡 Real-time Optimization
+
+The `useSocket` hook is optimized for high-frequency updates:
+
+```tsx
+// Memoized listeners prevent unnecessary re-renders
+const { subscribeToSymbol, isConnected } = useSocket({
+  autoConnect: true,
+  enableSignals: true,
+  enableAgentThoughts: showTerminal,
+});
+```
+
+## 🧪 Development
+
+### Environment Variables
+
+Create `.env` in project root:
+
+```bash
+EXPO_PUBLIC_API_URL=http://localhost:4000/api/v1
+EXPO_PUBLIC_WS_URL=http://localhost:4000
+EXPO_PUBLIC_AI_URL=http://localhost:8000
+```
+
+### Clear Cache
+
+```bash
+npx expo start --clear
+```
+
+### Build for Production
+
+```bash
+# Build for iOS
+eas build --platform ios
+
+# Build for Android
+eas build --platform android
+```
+
+## 📱 Screens
+
+### Dashboard
+- Portfolio value summary
+- Day P&L with trend indicator
+- Quick stats (signals, positions, orders)
+- Real-time watchlist
+
+### AI Signals
+- Live AI-generated trading signals
+- Confidence scores and reasoning
+- Agent terminal view (swarm thoughts)
+- Filter by action type
+
+### Trade
+- Symbol selection with mini chart
+- Buy/Sell toggle
+- Order types (Market, Limit, Stop)
+- Stop Loss & Take Profit
+- Order cost summary
+
+### Portfolio
+- Total value and P&L tracking
+- Open positions list
+- Pending orders
+- Trade history
+
+## 🔗 Related Services
+
+- **NestJS Backend**: `neuraltrade-be/` (Port 4000)
+- **Python AI Engine**: `main.py` (Port 8000, gRPC 50051)
+- **Admin Panel**: `neuraltrade-admin/` (Port 3010)
+- **Web Frontend**: `neuraltrade-fe/` (Port 3001)
+
+## 📄 License
+
+Private - NeuralTrade
