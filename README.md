@@ -212,11 +212,6 @@ This project demonstrates the ability to **read, understand, and implement compl
 
 NeuralTrade implements a sophisticated **6-Layer Architecture** designed for enterprise-scale trading operations:
 
-
-## 🏗 Architecture
-
-NeuralTrade implements a sophisticated **6-Layer Architecture** designed for enterprise-scale trading operations:
-
 ```mermaid
 graph TD
     subgraph L1["Layer 1: Presentation & Client Layer"]
@@ -1613,4 +1608,5 @@ This project is proprietary software. All rights reserved.
 📧 erdincerdogan61@gmail.com | 🔗 [LinkedIn](https://www.linkedin.com/in/erdincerdgn/) | 💻 [GitHub](https://github.com/erdincerdgn)
 
 </div>
+
 
